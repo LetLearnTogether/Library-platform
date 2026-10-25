@@ -1,0 +1,113 @@
+openapi: 3.0.3
+info:
+  title: LetLearnTogether API
+  version: 1.0.0
+servers:
+  - url: /api/v1
+
+paths:
+  /auth/register:
+    post:
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                email: { type: string, format: email }
+                password: { type: string, minLength: 8 }
+                role: { type: string, enum: [Student, Lecturer] }
+      responses:
+        '201': { description: User created }
+
+  /auth/login:
+    post:
+      summary: Login and receive JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        '200': 
+          description: Returns JWT token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token: { type: string }
+                  token_type: { type: string, example: bearer }
+
+  /documents:
+    get:
+      summary: List & Search documents
+      parameters:
+        - name: course_id
+          in: query
+          schema: { type: integer }
+        - name: year
+          in: query
+          schema: { type: integer }
+        - name: semester
+          in: query
+          schema: { type: string }
+      responses:
+        '200': { description: List of verified documents }
+    post:
+      summary: Upload a document (Sets status to 'Under Review')
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: { type: string, format: binary }
+                course_id: { type: integer }
+                document_type: { type: string }
+      responses:
+        '201': { description: Document uploaded, pending review }
+
+  /documents/{id}/review:
+    put:
+      summary: Approve or Reject document (Lecturer/Admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action: { type: string, enum: [approve, reject] }
+      responses:
+        '200': { description: Status updated. Generates verification_token if approved }
+
+  /verification/{token}:
+    get:
+      summary: Public verification page (No auth required)
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': 
+          description: Returns document status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [Verified, Revoked] }
+                  course_code: { type: string }
