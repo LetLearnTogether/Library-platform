@@ -1,7 +1,12 @@
 -- LetLearnTogether Database Schema (MySQL)
 -- Created by: Oliver D. Toee (Database Lead)
 
-CREATE TABLE Users (
+-- 1. Create and select the database
+CREATE DATABASE IF NOT EXISTS letlearn_db;
+USE letlearn_db;
+
+-- 2. Create Tables
+CREATE TABLE IF NOT EXISTS Users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     email VARCHAR(150) UNIQUE NOT NULL,
@@ -10,7 +15,7 @@ CREATE TABLE Users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE Courses (
+CREATE TABLE IF NOT EXISTS Courses (
     id INT AUTO_INCREMENT PRIMARY KEY,
     course_code VARCHAR(50) UNIQUE NOT NULL,
     course_title VARCHAR(255) NOT NULL,
@@ -20,7 +25,7 @@ CREATE TABLE Courses (
     FOREIGN KEY (lecturer_id) REFERENCES Users(id)
 );
 
-CREATE TABLE Documents (
+CREATE TABLE IF NOT EXISTS Documents (
     id INT AUTO_INCREMENT PRIMARY KEY,
     course_id INT NOT NULL,
     document_type ENUM('Midterm', 'Final', 'Assignment', 'Quiz', 'Syllabus') NOT NULL,
@@ -36,7 +41,7 @@ CREATE TABLE Documents (
     FOREIGN KEY (approved_by) REFERENCES Users(id)
 );
 
-CREATE TABLE Quizzes (
+CREATE TABLE IF NOT EXISTS Quizzes (
     id INT AUTO_INCREMENT PRIMARY KEY,
     course_id INT NOT NULL,
     title VARCHAR(255) NOT NULL,
@@ -47,7 +52,7 @@ CREATE TABLE Quizzes (
     FOREIGN KEY (created_by) REFERENCES Users(id)
 );
 
-CREATE TABLE Quiz_Questions (
+CREATE TABLE IF NOT EXISTS Quiz_Questions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     quiz_id INT NOT NULL,
     question_text TEXT NOT NULL,
@@ -56,7 +61,7 @@ CREATE TABLE Quiz_Questions (
     FOREIGN KEY (quiz_id) REFERENCES Quizzes(id) ON DELETE CASCADE
 );
 
-CREATE TABLE Quiz_Attempts (
+CREATE TABLE IF NOT EXISTS Quiz_Attempts (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     quiz_id INT NOT NULL,
@@ -65,3 +70,9 @@ CREATE TABLE Quiz_Attempts (
     FOREIGN KEY (user_id) REFERENCES Users(id),
     FOREIGN KEY (quiz_id) REFERENCES Quizzes(id)
 );
+
+-- 3. Performance Indexes (Helps the app run faster)
+CREATE INDEX idx_users_email ON Users(email);
+CREATE INDEX idx_courses_code ON Courses(course_code);
+CREATE INDEX idx_documents_token ON Documents(verification_token);
+CREATE INDEX idx_documents_course ON Documents(course_id);
