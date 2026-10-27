@@ -17,13 +17,18 @@
 *   **OS & Deployment:** Ubuntu Linux, Docker (Containerized)
 *   **Domain & DNS:** Cloudflare
 
-## 📁 Documentation
+## ## 📁 Documentation
 All detailed project documentation is located in the `docs/` folder:
 *   [Product Requirements Document (PRD)](docs/PRD.md)
 *   [Software Requirements Specification (SRS)](docs/SRS.md)
-*   [Database ER Diagram](docs/ERD.md)
-*   [API Schema & Contract](docs/API_SCHEMA.md)
+*   [Database Architecture & ERD](docs/DATABASE_ARCHITECTURE.md)
+*   [API Schema & Contract](docs/API_SPEC.yaml)
 *   [User Manual](docs/USER_MANUAL.md)
+
+##  System Architecture
+Below is the visual blueprint of our database structure and document workflow:
+
+![System Architecture and Database ERD](docs/system-architecture.png)
 
 ## 🚀 Getting Started (Local Development)
 
