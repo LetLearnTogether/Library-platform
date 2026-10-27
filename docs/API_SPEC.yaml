@@ -6,6 +6,7 @@ servers:
   - url: /api/v1
 
 paths:
+  # --- AUTHENTICATION (SRS FR-AUTH) ---
   /auth/register:
     post:
       summary: Register a new user
@@ -19,9 +20,15 @@ paths:
                 name: { type: string }
                 email: { type: string, format: email }
                 password: { type: string, minLength: 8 }
-                role: { type: string, enum: [Student, Lecturer] }
+                role: { type: string, enum: [Student, Lecturer, Moderator, Admin] }
       responses:
         '201': { description: User created }
+        '400':
+          description: Standard Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /auth/login:
     post:
@@ -46,9 +53,10 @@ paths:
                   access_token: { type: string }
                   token_type: { type: string, example: bearer }
 
+  # --- DOCUMENTS & VERIFICATION (SRS FR-DOC, FR-VER) ---
   /documents:
     get:
-      summary: List & Search documents
+      summary: List & Search documents (Virtual Folder Structure)
       parameters:
         - name: course_id
           in: query
@@ -57,6 +65,9 @@ paths:
           in: query
           schema: { type: integer }
         - name: semester
+          in: query
+          schema: { type: string }
+        - name: document_type
           in: query
           schema: { type: string }
       responses:
@@ -77,7 +88,7 @@ paths:
 
   /documents/{id}/review:
     put:
-      summary: Approve or Reject document (Lecturer/Admin only)
+      summary: Approve or Reject document (Lecturer/Admin/Moderator only)
       parameters:
         - name: id
           in: path
@@ -89,7 +100,7 @@ paths:
             schema:
               type: object
               properties:
-                action: { type: string, enum: [approve, reject] }
+                action: { type: string, enum: [approve, reject, revoke] }
       responses:
         '200': { description: Status updated. Generates verification_token if approved }
 
@@ -111,3 +122,72 @@ paths:
                 properties:
                   status: { type: string, enum: [Verified, Revoked] }
                   course_code: { type: string }
+                  approval_date: { type: string, format: date-time }
+
+  # --- QUIZZES (SRS FR-QUIZ) ---
+  /quizzes:
+    post:
+      summary: Create a new MCQ quiz (Lecturer only)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                course_id: { type: integer }
+                title: { type: string }
+                questions: 
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      question_text: { type: string }
+                      options: { type: array, items: { type: string } }
+                      correct_answer_index: { type: integer }
+      responses:
+        '201': { description: Quiz created }
+    get:
+      summary: List available quizzes
+      responses:
+        '200': { description: List of published quizzes }
+
+  /quizzes/{id}/attempt:
+    post:
+      summary: Submit a quiz attempt (System calculates score server-side)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                answers:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      question_id: { type: integer }
+                      selected_option_index: { type: integer }
+      responses:
+        '200': 
+          description: Returns calculated score and saves history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  score: { type: number }
+                  total_questions: { type: integer }
+
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        error_code: { type: string, example: DOC_NOT_FOUND }
+        message: { type: string, example: The requested document does not exist. }
+        request_id: { type: string, example: req_12345abc }
