@@ -1,0 +1,30 @@
+# Environment variables
+.env
+.env.production
+backend/.env
+frontend/.env
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Node / React
+node_modules/
+frontend/dist/
+frontend/build/
+backups/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

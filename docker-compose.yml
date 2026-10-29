@@ -1,0 +1,147 @@
+x-logging-defaults: &logging-defaults
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:?Set MYSQL_DATABASE in .env}
+      MYSQL_USER: ${MYSQL_USER:?Set MYSQL_USER in .env}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=+00:00
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping --host=127.0.0.1 --user=root --password=\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    mem_limit: 2g
+    cpus: 2.0
+    security_opt:
+      - no-new-privileges:true
+    logging: *logging-defaults
+    networks: [private]
+
+  upload-volume-init:
+    image: alpine:3.21
+    user: "0:0"
+    command: ["sh", "-c", "mkdir -p /uploads && chown -R 10001:10001 /uploads"]
+    volumes:
+      - uploaded_documents:/uploads
+    restart: "no"
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: ${MYSQL_DATABASE:?Set MYSQL_DATABASE in .env}
+      DB_USER: ${MYSQL_USER:?Set MYSQL_USER in .env}
+      DB_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      PUBLIC_API_BASE_URL: ${PUBLIC_API_BASE_URL:?Set PUBLIC_API_BASE_URL in .env}
+      PUBLIC_FRONTEND_URL: ${PUBLIC_FRONTEND_URL:?Set PUBLIC_FRONTEND_URL in .env}
+      CORS_ORIGINS: ${PUBLIC_FRONTEND_URL:?Set PUBLIC_FRONTEND_URL in .env}
+      UPLOAD_DIR: /var/lib/letlearn/uploads
+      MAX_UPLOAD_SIZE_BYTES: ${MAX_UPLOAD_SIZE_BYTES:-10485760}
+    volumes:
+      - uploaded_documents:/var/lib/letlearn/uploads
+    read_only: true
+    tmpfs:
+      - /tmp
+    depends_on:
+      db:
+        condition: service_healthy
+      upload-volume-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    mem_limit: 768m
+    cpus: 1.5
+    security_opt:
+      - no-new-privileges:true
+    logging: *logging-defaults
+    networks: [private]
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: /api/v1
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+    mem_limit: 256m
+    cpus: 1.0
+    security_opt:
+      - no-new-privileges:true
+    logging: *logging-defaults
+    networks: [private, edge]
+
+  proxy:
+    image: caddy:2.9-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN in .env}
+      ACME_EMAIL: ${ACME_EMAIL:?Set ACME_EMAIL in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      frontend:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp
+    mem_limit: 256m
+    cpus: 0.5
+    security_opt:
+      - no-new-privileges:true
+    logging: *logging-defaults
+    networks: [edge]
+
+volumes:
+  mysql_data:
+  uploaded_documents:
+  caddy_data:
+  caddy_config:
+
+networks:
+  private:
+    driver: bridge
+  edge:
+    driver: bridge

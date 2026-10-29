@@ -1,0 +1,1681 @@
+openapi: 3.0.3
+info:
+  title: LetLearnTogether API
+  version: 1.0.0
+  description: |
+    Contract for the LetLearnTogether student library, document verification,
+    moderation, and quiz services.
+
+    All API routes are under `/api/v1`. Responses use JSON except for document
+    content downloads and QR-code image responses. List endpoints use
+    `page` (1-based) and `page_size` (default 20, maximum 100).
+servers:
+  - url: /api/v1
+    description: Current host
+tags:
+  - name: Authentication
+  - name: Users
+  - name: Courses
+  - name: Documents
+  - name: Verification
+  - name: Reports
+  - name: Quizzes
+  - name: Quiz attempts
+
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register a student account
+      description: Public registration always creates a Student account. Elevated roles are assigned by an administrator.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Authenticate and issue an access token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Credentials accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /auth/me:
+    get:
+      tags: [Authentication]
+      summary: Get the authenticated user's profile
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /users:
+    get:
+      tags: [Users]
+      summary: List users
+      description: Admin only.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: role
+          in: query
+          schema:
+            $ref: '#/components/schemas/UserRole'
+      responses:
+        '200':
+          description: Paginated users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      tags: [Users]
+      summary: Create a user account
+      description: Admin only. Public account creation should use POST /auth/register.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '201':
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /users/{user_id}:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    get:
+      tags: [Users]
+      summary: Get a user account
+      description: Admin only.
+      responses:
+        '200':
+          description: User account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        default:
+          $ref: '#/components/responses/Error'
+    patch:
+      tags: [Users]
+      summary: Update a user account or role
+      description: Admin only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        default:
+          $ref: '#/components/responses/Error'
+    delete:
+      tags: [Users]
+      summary: Delete a user account
+      description: Admin only.
+      responses:
+        '204':
+          description: User deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /courses:
+    get:
+      tags: [Courses]
+      summary: List and search courses
+      description: Course metadata is public. Supports filtering and pagination.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: q
+          in: query
+          description: Search course code or title.
+          schema:
+            type: string
+            maxLength: 100
+        - name: year
+          in: query
+          schema:
+            type: integer
+            minimum: 1900
+            maximum: 2200
+        - name: semester
+          in: query
+          schema:
+            $ref: '#/components/schemas/Semester'
+      responses:
+        '200':
+          description: Paginated courses
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CoursePage'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      tags: [Courses]
+      summary: Create a course
+      description: Admin only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CourseCreate'
+      responses:
+        '201':
+          description: Course created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Course'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /courses/{course_id}:
+    parameters:
+      - $ref: '#/components/parameters/CourseId'
+    get:
+      tags: [Courses]
+      summary: Get course details
+      security: []
+      responses:
+        '200':
+          description: Course details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Course'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        default:
+          $ref: '#/components/responses/Error'
+    patch:
+      tags: [Courses]
+      summary: Update a course
+      description: Admin only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CourseUpdate'
+      responses:
+        '200':
+          description: Course updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Course'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        default:
+          $ref: '#/components/responses/Error'
+    delete:
+      tags: [Courses]
+      summary: Delete a course
+      description: Admin only. Deletion behavior for courses with linked content must be enforced by the service.
+      responses:
+        '204':
+          description: Course deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /documents:
+    get:
+      tags: [Documents]
+      summary: Search verified documents
+      description: Returns verified documents only. Results are paginated.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: q
+          in: query
+          description: Search the document filename, course code, or course title.
+          schema:
+            type: string
+            maxLength: 100
+        - name: course_id
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: course_code
+          in: query
+          schema:
+            type: string
+            maxLength: 50
+        - name: year
+          in: query
+          schema:
+            type: integer
+            minimum: 1900
+            maximum: 2200
+        - name: semester
+          in: query
+          schema:
+            $ref: '#/components/schemas/Semester'
+        - name: document_type
+          in: query
+          schema:
+            $ref: '#/components/schemas/DocumentType'
+      responses:
+        '200':
+          description: Paginated verified documents
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentPage'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      tags: [Documents]
+      summary: Upload a document for review
+      description: Student or higher role. PDF, JPEG, PNG, and WebP files are validated by extension and MIME type. The original filename is retained as the document's display filename. New documents have status Under Review.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, course_id, document_type]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                course_id:
+                  type: integer
+                  minimum: 1
+                document_type:
+                  $ref: '#/components/schemas/DocumentType'
+      responses:
+        '201':
+          description: Document uploaded and queued for review
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /documents/mine:
+    get:
+      tags: [Documents]
+      summary: List documents submitted by the current user
+      description: Returns the caller's own documents, including their review status.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/DocumentStatus'
+      responses:
+        '200':
+          description: Paginated documents submitted by the caller
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /documents/review-queue:
+    get:
+      tags: [Documents]
+      summary: List documents awaiting review
+      description: Lecturer, Moderator, or Admin. Lecturers see only documents for courses assigned to them; Moderators and Admins see all pending submissions.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Paginated review queue
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /documents/{document_id}:
+    parameters:
+      - $ref: '#/components/parameters/DocumentId'
+    get:
+      tags: [Documents]
+      summary: Get verified document metadata
+      description: Only verified documents are publicly available through this route.
+      security: []
+      responses:
+        '200':
+          description: Verified document metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        default:
+          $ref: '#/components/responses/Error'
+    delete:
+      tags: [Documents]
+      summary: Remove document content
+      description: Moderator or Admin only. Revokes an existing verification stamp before removing or restricting the content.
+      responses:
+        '204':
+          description: Document removed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /documents/{document_id}/content:
+    parameters:
+      - $ref: '#/components/parameters/DocumentId'
+    get:
+      tags: [Documents]
+      summary: View or download a verified document
+      description: Returns the file bytes with the stored MIME type. Only verified documents are available.
+      security: []
+      parameters:
+        - name: disposition
+          in: query
+          description: "'inline' displays the file when supported; 'attachment' prompts a download."
+          schema:
+            type: string
+            enum: [inline, attachment]
+            default: inline
+      responses:
+        '200':
+          description: Document file content
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+            X-Content-Type-Options:
+              schema:
+                type: string
+                example: nosniff
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/NotFound'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /documents/{document_id}/review-content:
+    parameters:
+      - $ref: '#/components/parameters/DocumentId'
+    get:
+      tags: [Documents]
+      summary: Preview a document awaiting review
+      description: Lecturer assigned to the course, Moderator, or Admin. Lecturer access is limited to assigned courses.
+      responses:
+        '200':
+          description: Submitted document file
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /documents/{document_id}/review:
+    parameters:
+      - $ref: '#/components/parameters/DocumentId'
+    put:
+      tags: [Documents]
+      summary: Approve or reject a submitted document
+      description: Lecturer assigned to the course, Moderator, or Admin. Approval generates a unique verification token and QR code.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentReviewRequest'
+      responses:
+        '200':
+          description: Review decision applied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /documents/{document_id}/revoke:
+    parameters:
+      - $ref: '#/components/parameters/DocumentId'
+    put:
+      tags: [Documents]
+      summary: Revoke a verified document stamp
+      description: Moderator or Admin only. The public verification token remains resolvable and reports status Revoked.
+      responses:
+        '200':
+          description: Verification revoked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /verification/{token}:
+    get:
+      tags: [Verification]
+      summary: Verify a document's digital stamp
+      description: Public endpoint used by the QR code. Returns Verified or Revoked for a valid token.
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Verification details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Verification'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /verification/{token}/qr:
+    get:
+      tags: [Verification]
+      summary: Get the QR code for a verification token
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: QR code image linking to the public verification endpoint
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/NotFound'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /documents/{document_id}/reports:
+    parameters:
+      - $ref: '#/components/parameters/DocumentId'
+    post:
+      tags: [Reports]
+      summary: Report a document
+      description: Authenticated user submits a moderation report.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportCreate'
+      responses:
+        '201':
+          description: Report submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Report'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /reports:
+    get:
+      tags: [Reports]
+      summary: List moderation reports
+      description: Moderator or Admin only.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ReportStatus'
+      responses:
+        '200':
+          description: Paginated reports
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /reports/{report_id}:
+    parameters:
+      - $ref: '#/components/parameters/ReportId'
+    put:
+      tags: [Reports]
+      summary: Update moderation report status
+      description: Moderator or Admin only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportUpdate'
+      responses:
+        '200':
+          description: Report updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Report'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /quizzes:
+    get:
+      tags: [Quizzes]
+      summary: List published quizzes
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: course_id
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: year
+          in: query
+          schema:
+            type: integer
+            minimum: 1900
+            maximum: 2200
+        - name: semester
+          in: query
+          schema:
+            $ref: '#/components/schemas/Semester'
+        - name: q
+          in: query
+          description: Search quiz title or course.
+          schema:
+            type: string
+            maxLength: 100
+      responses:
+        '200':
+          description: Paginated published quizzes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizPage'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      tags: [Quizzes]
+      summary: Create a quiz
+      description: Lecturer assigned to the course or Admin.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuizCreate'
+      responses:
+        '201':
+          description: Quiz created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Quiz'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /quizzes/{quiz_id}:
+    parameters:
+      - $ref: '#/components/parameters/QuizId'
+    get:
+      tags: [Quizzes]
+      summary: Get a published quiz
+      description: Correct answer indexes are never returned by read endpoints.
+      security: []
+      responses:
+        '200':
+          description: Quiz questions and choices
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Quiz'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        default:
+          $ref: '#/components/responses/Error'
+    put:
+      tags: [Quizzes]
+      summary: Replace quiz content or publication state
+      description: Lecturer assigned to the course or Admin.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuizReplace'
+      responses:
+        '200':
+          description: Quiz updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Quiz'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        default:
+          $ref: '#/components/responses/Error'
+    delete:
+      tags: [Quizzes]
+      summary: Delete a quiz
+      description: Lecturer assigned to the course or Admin.
+      responses:
+        '204':
+          description: Quiz deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /quizzes/{quiz_id}/attempts:
+    parameters:
+      - $ref: '#/components/parameters/QuizId'
+    post:
+      tags: [Quiz attempts]
+      summary: Submit answers and record an attempt
+      description: Student only. The server calculates the score using stored correct answers; clients cannot submit a score.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuizAttemptCreate'
+      responses:
+        '201':
+          description: Attempt graded and recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizAttemptResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /quiz-attempts/mine:
+    get:
+      tags: [Quiz attempts]
+      summary: List the current student's quiz attempts
+      description: Student only. A student can access only their own attempt history.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: quiz_id
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Paginated attempt history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizAttemptPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        default:
+          $ref: '#/components/responses/Error'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Page:
+      name: page
+      in: query
+      description: 1-based page number.
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PageSize:
+      name: page_size
+      in: query
+      description: Number of items per page.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    UserId:
+      name: user_id
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    CourseId:
+      name: course_id
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    DocumentId:
+      name: document_id
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    ReportId:
+      name: report_id
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    QuizId:
+      name: quiz_id
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+
+  responses:
+    BadRequest:
+      description: Request could not be processed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Authentication is required or credentials are invalid.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: Authenticated user lacks permission for this operation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Requested resource was not found or is not available.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Conflict:
+      description: Request conflicts with the current resource state.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    PayloadTooLarge:
+      description: Uploaded file exceeds the configured size limit.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    UnsupportedMediaType:
+      description: Uploaded file type or content is not allowed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ValidationError:
+      description: Request data failed validation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error:
+      description: Unexpected API error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    Error:
+      type: object
+      required: [error_code, message, request_id]
+      properties:
+        error_code:
+          type: string
+          example: DOC_NOT_FOUND
+        message:
+          type: string
+          example: The requested document does not exist.
+        request_id:
+          type: string
+          example: req_12345abc
+
+    UserRole:
+      type: string
+      enum: [Student, Lecturer, Moderator, Admin]
+
+    Semester:
+      type: string
+      enum: [First, Second]
+
+    DocumentType:
+      type: string
+      enum: [Midterm, Final, Assignment, Quiz, Syllabus]
+
+    DocumentStatus:
+      type: string
+      enum: [Under Review, Verified, Rejected, Revoked]
+
+    ReportStatus:
+      type: string
+      enum: [Open, In Review, Resolved, Dismissed]
+
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          maxLength: 150
+        password:
+          type: string
+          format: password
+          description: Maximum 72 UTF-8 bytes because passwords are hashed with bcrypt.
+          minLength: 8
+          maxLength: 128
+          description: Maximum 72 UTF-8 bytes because passwords are hashed with bcrypt.
+
+    UserCreate:
+      type: object
+      additionalProperties: false
+      required: [name, email, password, role]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          maxLength: 150
+        password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 128
+          description: Maximum 72 UTF-8 bytes because passwords are hashed with bcrypt.
+        role:
+          $ref: '#/components/schemas/UserRole'
+
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+
+    TokenResponse:
+      type: object
+      required: [access_token, token_type, expires_in]
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          enum: [bearer]
+        expires_in:
+          type: integer
+          description: Token lifetime in seconds.
+          example: 1800
+
+    User:
+      type: object
+      required: [id, name, email, role, created_at]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          $ref: '#/components/schemas/UserRole'
+        created_at:
+          type: string
+          format: date-time
+
+    UserUpdate:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          maxLength: 150
+        role:
+          $ref: '#/components/schemas/UserRole'
+
+    CourseCreate:
+      type: object
+      additionalProperties: false
+      required: [course_code, course_title, year, semester]
+      properties:
+        course_code:
+          type: string
+          minLength: 1
+          maxLength: 50
+        course_title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        year:
+          type: integer
+          minimum: 1900
+          maximum: 2200
+        semester:
+          $ref: '#/components/schemas/Semester'
+        lecturer_id:
+          type: integer
+          minimum: 1
+          nullable: true
+
+    CourseUpdate:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        course_code:
+          type: string
+          minLength: 1
+          maxLength: 50
+        course_title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        year:
+          type: integer
+          minimum: 1900
+          maximum: 2200
+        semester:
+          $ref: '#/components/schemas/Semester'
+        lecturer_id:
+          type: integer
+          minimum: 1
+          nullable: true
+
+    Course:
+      type: object
+      required: [id, course_code, course_title, year, semester]
+      properties:
+        id:
+          type: integer
+        course_code:
+          type: string
+        course_title:
+          type: string
+        year:
+          type: integer
+        semester:
+          $ref: '#/components/schemas/Semester'
+        lecturer_id:
+          type: integer
+          nullable: true
+
+    Document:
+      type: object
+      required: [id, course_id, course, document_type, filename, status, uploaded_by, created_at]
+      properties:
+        id:
+          type: integer
+        course_id:
+          type: integer
+        course:
+          $ref: '#/components/schemas/Course'
+        document_type:
+          $ref: '#/components/schemas/DocumentType'
+        filename:
+          type: string
+        status:
+          $ref: '#/components/schemas/DocumentStatus'
+        uploaded_by:
+          type: integer
+        approved_by:
+          type: integer
+          nullable: true
+        approved_at:
+          type: string
+          format: date-time
+          nullable: true
+        reviewed_by:
+          type: integer
+          nullable: true
+        reviewed_at:
+          type: string
+          format: date-time
+          nullable: true
+        review_note:
+          type: string
+          nullable: true
+        verification_token:
+          type: string
+          format: uuid
+          nullable: true
+        verification_url:
+          type: string
+          format: uri
+          nullable: true
+        qr_code_url:
+          type: string
+          format: uri
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    DocumentReviewRequest:
+      type: object
+      additionalProperties: false
+      required: [action]
+      properties:
+        action:
+          type: string
+          enum: [approve, reject]
+        review_note:
+          type: string
+          maxLength: 1000
+
+    Verification:
+      type: object
+      required: [document_id, course_code, course_title, document_type, approved_at, status]
+      properties:
+        document_id:
+          type: integer
+        course_code:
+          type: string
+        course_title:
+          type: string
+        document_type:
+          $ref: '#/components/schemas/DocumentType'
+        approved_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [Verified, Revoked]
+
+    ReportCreate:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 2000
+
+    ReportUpdate:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          $ref: '#/components/schemas/ReportStatus'
+        moderator_note:
+          type: string
+          maxLength: 2000
+
+    Report:
+      type: object
+      required: [id, document_id, submitted_by, reason, status, created_at]
+      properties:
+        id:
+          type: integer
+        document_id:
+          type: integer
+        submitted_by:
+          type: integer
+        reason:
+          type: string
+        status:
+          $ref: '#/components/schemas/ReportStatus'
+        moderator_note:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    QuizQuestionInput:
+      type: object
+      additionalProperties: false
+      required: [question_text, options, correct_answer_index]
+      properties:
+        question_text:
+          type: string
+          minLength: 1
+          maxLength: 5000
+        options:
+          type: array
+          minItems: 2
+          maxItems: 10
+          items:
+            type: string
+            minLength: 1
+            maxLength: 1000
+        correct_answer_index:
+          type: integer
+          minimum: 0
+          description: Zero-based index into options; must be less than the number of options.
+
+    QuizQuestion:
+      type: object
+      required: [id, question_text, options]
+      properties:
+        id:
+          type: integer
+        question_text:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+
+    QuizQuestionAnswer:
+      type: object
+      additionalProperties: false
+      required: [question_id, selected_option_index]
+      properties:
+        question_id:
+          type: integer
+          minimum: 1
+        selected_option_index:
+          type: integer
+          minimum: 0
+          description: Zero-based option index; must be valid for the referenced question.
+
+    QuizCreate:
+      type: object
+      additionalProperties: false
+      required: [course_id, title, questions]
+      properties:
+        course_id:
+          type: integer
+          minimum: 1
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        type:
+          type: string
+          maxLength: 50
+        is_published:
+          type: boolean
+          default: false
+        questions:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/QuizQuestionInput'
+
+    QuizReplace:
+      type: object
+      additionalProperties: false
+      required: [title, is_published, questions]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        type:
+          type: string
+          maxLength: 50
+        is_published:
+          type: boolean
+        questions:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/QuizQuestionInput'
+
+    Quiz:
+      type: object
+      required: [id, course_id, course, title, is_published, questions]
+      properties:
+        id:
+          type: integer
+        course_id:
+          type: integer
+        course:
+          $ref: '#/components/schemas/Course'
+        title:
+          type: string
+        type:
+          type: string
+          nullable: true
+        is_published:
+          type: boolean
+        questions:
+          type: array
+          description: Correct-answer indexes are omitted from this representation.
+          items:
+            $ref: '#/components/schemas/QuizQuestion'
+
+    QuizAttemptCreate:
+      type: object
+      additionalProperties: false
+      required: [answers]
+      properties:
+        answers:
+          type: array
+          description: Include exactly one answer for every question in the quiz; duplicate or unknown question IDs are rejected.
+          items:
+            $ref: '#/components/schemas/QuizQuestionAnswer'
+
+    QuizAttemptResult:
+      type: object
+      required: [id, quiz_id, score, total_questions, attempted_at]
+      properties:
+        id:
+          type: integer
+        quiz_id:
+          type: integer
+        score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+          description: Percentage score calculated by the server.
+        total_questions:
+          type: integer
+          minimum: 1
+        attempted_at:
+          type: string
+          format: date-time
+
+    QuizAttempt:
+      allOf:
+        - $ref: '#/components/schemas/QuizAttemptResult'
+        - type: object
+          required: [quiz_title]
+          properties:
+            quiz_title:
+              type: string
+
+    UserPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/User'
+
+    CoursePage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Course'
+
+    DocumentPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Document'
+
+    ReportPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Report'
+
+    QuizPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Quiz'
+
+    QuizAttemptPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/QuizAttempt'
+
+    PageMetadata:
+      type: object
+      required: [page, page_size, total_items, total_pages]
+      properties:
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total_items:
+          type: integer
+          minimum: 0
+        total_pages:
+          type: integer
+          minimum: 0
