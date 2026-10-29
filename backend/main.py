@@ -1,9 +1,4 @@
-# FastAPI Entry Point
-from fastapi import FastAPI
+# Backwards-compatible entry point for `uvicorn main:app` from backend/.
+from app.main import app
 
-app = FastAPI()
-
-@app.get('/')
-
-def root():
-    return {'message': 'LetLearnTogether API is running'}
+__all__ = ["app"]

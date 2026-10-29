@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../auth/useAuth';
 import './LoginPage.css';
 
 function LoginPage() {
@@ -7,8 +8,12 @@ function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
     setMessage('');
 
@@ -22,9 +27,29 @@ function LoginPage() {
       return;
     }
 
-    setMessage(
-      'Your form is valid. Sign-in will be available when the backend is connected.'
-    );
+    setSubmitting(true);
+    try {
+      const user = await login(email.trim(), password);
+      const isStaff = ['Lecturer', 'Moderator', 'Admin'].includes(user.role);
+      const requestedPath = location.state?.from?.pathname;
+      const requestedPathIsRestricted = requestedPath === '/student-dashboard'
+        ? user.role !== 'Student'
+        : requestedPath === '/staff'
+          ? !isStaff
+          : requestedPath?.startsWith('/quizzes/')
+            ? user.role !== 'Student'
+            : false;
+      navigate(
+        requestedPath && !requestedPathIsRestricted
+          ? requestedPath
+          : user.role === 'Admin' ? '/admin' : isStaff ? '/staff' : '/student-dashboard',
+        { replace: true },
+      );
+    } catch (error) {
+      setMessage(error.message || 'Unable to sign in. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -82,8 +107,8 @@ function LoginPage() {
             </p>
           )}
 
-          <button className="login-submit" type="submit">
-            Sign in
+          <button className="login-submit" type="submit" disabled={submitting}>
+            {submitting ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
 
@@ -91,9 +116,6 @@ function LoginPage() {
           Don&apos;t have an account? <Link to="/register">Create an account</Link>
         </p>
 
-        <p className="login-demo-note">
-          Secure sign-in will be enabled when the backend is connected.
-        </p>
       </section>
     </main>
   );

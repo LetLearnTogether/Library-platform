@@ -13,9 +13,11 @@ python -m pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-The API is available at `http://localhost:8000`; interactive documentation is at `http://localhost:8000/docs`. Without a configured `DB_HOST` or `DATABASE_URL`, local development uses SQLite.
+The API is available at `http://localhost:8000`; interactive documentation is at `http://localhost:8000/docs`. Without a configured `DB_HOST` or `DATABASE_URL`, local development uses SQLite. The Vite development server proxies API requests to this local server.
 
 Configure `SECRET_KEY`, `DATABASE_URL` or the `DB_*` values, `PUBLIC_API_BASE_URL`, `CORS_ORIGINS`, `UPLOAD_DIR`, and `MAX_UPLOAD_SIZE_BYTES` in `backend/.env`. Use a private random secret and do not commit this file.
+
+Run `alembic upgrade head` from the `backend` directory before starting the API. The application does not mutate the database schema automatically. For the DigitalOcean + Cloudflare target, follow the [production deployment runbook](./production-deployment.md).
 
 ## Frontend integration
 

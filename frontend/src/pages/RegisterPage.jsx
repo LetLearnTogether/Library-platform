@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../auth/useAuth';
 import './RegisterPage.css';
 
 export default function RegisterPage() {
@@ -12,6 +13,9 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const { register } = useAuth();
+  const navigate = useNavigate();
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -22,7 +26,7 @@ export default function RegisterPage() {
     }));
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
     setMessage('');
     setMessageType('');
@@ -51,10 +55,26 @@ export default function RegisterPage() {
       return;
     }
 
-    setMessage(
-      'Your information passed validation. Account creation will be available when the backend is connected.'
-    );
-    setMessageType('success');
+    if (new TextEncoder().encode(form.password).length > 72) {
+      setMessage('Your password must be no more than 72 UTF-8 bytes.');
+      setMessageType('error');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await register({
+        name: form.fullName.trim(),
+        email: form.email.trim(),
+        password: form.password,
+      });
+      navigate('/student-dashboard', { replace: true });
+    } catch (error) {
+      setMessage(error.message || 'Unable to create your account. Please try again.');
+      setMessageType('error');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -145,8 +165,8 @@ export default function RegisterPage() {
             Show passwords
           </label>
 
-          <button className="register-submit" type="submit">
-            Create Account
+          <button className="register-submit" type="submit" disabled={submitting}>
+            {submitting ? 'Creating account…' : 'Create Account'}
           </button>
         </form>
 
@@ -154,9 +174,6 @@ export default function RegisterPage() {
           Already have an account? <Link to="/login">Log in</Link>
         </p>
 
-        <p className="register-note">
-          Account registration is currently a frontend demonstration.
-        </p>
       </section>
     </main>
   );

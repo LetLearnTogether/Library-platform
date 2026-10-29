@@ -65,6 +65,14 @@ svg {
   min-height: 100vh;
 }
 
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 3px solid #60a5fa;
+  outline-offset: 2px;
+}
+
 ::selection {
   color: #173b6c;
   background: #dceaff;

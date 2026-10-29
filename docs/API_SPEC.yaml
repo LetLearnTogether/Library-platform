@@ -462,6 +462,28 @@ paths:
         default:
           $ref: '#/components/responses/Error'
 
+  /documents/review-queue:
+    get:
+      tags: [Documents]
+      summary: List documents awaiting review
+      description: Lecturer, Moderator, or Admin. Lecturers see only documents for courses assigned to them; Moderators and Admins see all pending submissions.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Paginated review queue
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        default:
+          $ref: '#/components/responses/Error'
+
   /documents/{document_id}:
     parameters:
       - $ref: '#/components/parameters/DocumentId'
@@ -541,6 +563,42 @@ paths:
               schema:
                 type: string
                 format: binary
+        '404':
+          $ref: '#/components/responses/NotFound'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /documents/{document_id}/review-content:
+    parameters:
+      - $ref: '#/components/parameters/DocumentId'
+    get:
+      tags: [Documents]
+      summary: Preview a document awaiting review
+      description: Lecturer assigned to the course, Moderator, or Admin. Lecturer access is limited to assigned courses.
+      responses:
+        '200':
+          description: Submitted document file
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
         default:

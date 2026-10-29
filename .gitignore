@@ -1,5 +1,6 @@
 # Environment variables
 .env
+.env.production
 backend/.env
 frontend/.env
 
@@ -16,6 +17,7 @@ build/
 node_modules/
 frontend/dist/
 frontend/build/
+backups/
 
 # IDE
 .vscode/

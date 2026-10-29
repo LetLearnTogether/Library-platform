@@ -25,20 +25,42 @@ CREATE TABLE IF NOT EXISTS Courses (
     FOREIGN KEY (lecturer_id) REFERENCES Users(id)
 );
 
+
+
 CREATE TABLE IF NOT EXISTS Documents (
     id INT AUTO_INCREMENT PRIMARY KEY,
     course_id INT NOT NULL,
     document_type ENUM('Midterm', 'Final', 'Assignment', 'Quiz', 'Syllabus') NOT NULL,
-    file_path VARCHAR(255) NOT NULL,
+    file_path VARCHAR(500) NOT NULL,
+    filename VARCHAR(255) NOT NULL,
+    content_type VARCHAR(100) NOT NULL,
     status ENUM('Under Review', 'Verified', 'Rejected', 'Revoked') DEFAULT 'Under Review',
     verification_token VARCHAR(100) UNIQUE,
     uploaded_by INT NOT NULL,
     approved_by INT,
+    approved_at TIMESTAMP NULL,
+    reviewed_by INT,
+    reviewed_at TIMESTAMP NULL,
+    review_note TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (course_id) REFERENCES Courses(id),
     FOREIGN KEY (uploaded_by) REFERENCES Users(id),
-    FOREIGN KEY (approved_by) REFERENCES Users(id)
+    FOREIGN KEY (approved_by) REFERENCES Users(id),
+    FOREIGN KEY (reviewed_by) REFERENCES Users(id)
+);
+
+CREATE TABLE IF NOT EXISTS Reports (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    document_id INT NOT NULL,
+    submitted_by INT NOT NULL,
+    reason TEXT NOT NULL,
+    status ENUM('Open', 'In Review', 'Resolved', 'Dismissed') NOT NULL DEFAULT 'Open',
+    moderator_note TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (document_id) REFERENCES Documents(id),
+    FOREIGN KEY (submitted_by) REFERENCES Users(id)
 );
 
 CREATE TABLE IF NOT EXISTS Quizzes (
@@ -66,13 +88,13 @@ CREATE TABLE IF NOT EXISTS Quiz_Attempts (
     user_id INT NOT NULL,
     quiz_id INT NOT NULL,
     score DECIMAL(5,2) NOT NULL,
+    total_questions INT NOT NULL,
     attempted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES Users(id),
     FOREIGN KEY (quiz_id) REFERENCES Quizzes(id)
 );
 
--- 3. Performance Indexes (Helps the app run faster)
-CREATE INDEX idx_users_email ON Users(email);
-CREATE INDEX idx_courses_code ON Courses(course_code);
-CREATE INDEX idx_documents_token ON Documents(verification_token);
+-- 3. Performance Indexes (unique columns above already have indexes)
 CREATE INDEX idx_documents_course ON Documents(course_id);
+CREATE INDEX idx_documents_status ON Documents(status);
+CREATE INDEX idx_reports_status ON Reports(status);

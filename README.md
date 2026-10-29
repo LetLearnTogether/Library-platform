@@ -7,6 +7,9 @@
 ## 📖 Project Overview
 **LetLearnTogether** is a mobile-first, phone-friendly web platform where students can find, read, download, and verify past examination papers, and practice multiple-choice quizzes. It replaces scattered, unverified chat files with a trusted, searchable, and moderated archive.
 
+Administrators can use the `/admin` overview, with separate `/admin/accounts` and `/admin/courses` pages. Each management page has Create and View tabs for adding records and managing existing accounts, roles, courses, and lecturer assignments. Document review and report moderation are available in the separate `/staff` workspace.
+Signed-in users use a dedicated workspace header and role-based sidebar. Public landing, login, and registration pages are only shown while signed out; signed-in users can open the document library inside their portal without the public landing page.
+
 **Live Site:** [https://your-domain.com](https://your-domain.com) *(Update this when deployed)*  
 **API Docs:** [https://your-domain.com/docs](https://your-domain.com/docs)
 
@@ -17,18 +20,18 @@
 *   **OS & Deployment:** Ubuntu Linux, Docker (Containerized)
 *   **Domain & DNS:** Cloudflare
 
-## ## 📁 Documentation
-All detailed project documentation is located in the `docs/` folder:
-*   [Product Requirements Document (PRD)](docs/PRD.md)
-*   [Software Requirements Specification (SRS)](docs/SRS.md)
-*   [Database Architecture & ERD](docs/DATABASE_ARCHITECTURE.md)
-*   [API Schema & Contract](docs/API_SPEC.yaml)
-*   [User Manual](docs/USER_MANUAL.md)
-
-##  System Architecture
-Below is the visual blueprint of our database structure and document workflow:
-
-![System Architecture and Database ERD](docs/system-architecture.png)
+## 📁 Documentation
+Project requirements and engineering references:
+* [Product Requirements Document](LetLearnTogether_PRD_v3.md)
+* [Software Requirements Specification](LetLearnTogether_SRS_v3.md)
+* [Backend architecture](docs/backend-architecture.md)
+* [Backend API contracts](docs/backend-api-contracts.md) and [OpenAPI specification](docs/API_SPEC.yaml)
+* [Backend integration guide](docs/backend-integration.md)
+* [Backend code review guide](docs/backend-code-review.md)
+* [Backend team coordination](docs/backend-coordination.md)
+* [Backend delivery checklist](docs/backend-delivery.md)
+* [MySQL schema reference](docs/schema.sql)
+* [Production deployment runbook](docs/production-deployment.md)
 
 ## 🚀 Getting Started (Local Development)
 
@@ -52,8 +55,15 @@ We use a `.env.sample` file to show the required variables. You must create your
 **Backend Setup:**
 ```bash
 cd backend
-cp .env.sample .env
-# Open .env in a text editor and fill in your local MySQL credentials and JWT secret
+copy .env.example .env
+# Set a long random SECRET_KEY. Fill in DB_HOST and the other DB_* values to use MySQL.
+# The example defaults to SQLite for local development.
+python -m venv .venv
+# Windows: .venv\Scripts\activate
+# macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt
+alembic upgrade head
+uvicorn app.main:app --reload
 ```
 
 **Frontend Setup:**
@@ -77,8 +87,26 @@ cd backend
 python -m venv venv
 source venv/bin/activate  # On Windows use: venv\Scripts\activate
 pip install -r requirements.txt
+alembic upgrade head
 uvicorn app.main:app --reload
 ```
+
+On first startup, SQLAlchemy creates missing tables in the configured database. The MySQL schema reference is in [docs/schema.sql](docs/schema.sql). For a stable deployment, set `SECRET_KEY`, `DATABASE_URL` (or the `DB_*` values), `PUBLIC_API_BASE_URL`, `PUBLIC_FRONTEND_URL`, `CORS_ORIGINS`, and `UPLOAD_DIR` in `backend/.env`. Uploaded files are limited to 10 MiB by default and stored in `backend/uploads/`.
+
+Apply the database migration with `alembic upgrade head` from `backend/` before running the API locally. Migrations do not automatically change an existing production schema; coordinate all schema updates with the database team.
+
+For a fresh install, create the first administrator interactively from the `backend` directory with `python -m app.create_admin`. Public registration intentionally creates Student accounts only.
+
+**Backend tests:**
+```bash
+cd backend
+pip install -r requirements-dev.txt
+python -m pytest tests -q
+```
+
+### Production deployment (DigitalOcean + Cloudflare)
+
+The repository includes a Docker Compose deployment with MySQL, persistent database/document volumes, Nginx, and Caddy-managed HTTPS. Read the [production deployment runbook](docs/production-deployment.md) before deploying. It requires a provisioned VPS, DNS, a Cloudflare Full (strict) configuration, and secrets created on the host. A deployment has not been performed from this development workspace.
 
 **Frontend:**
 ```bash
@@ -92,7 +120,7 @@ We follow a phased, sprint-based testing approach to ensure continuous quality:
 *   **Sprint 1-2:** Unit & Integration Testing (API and Database).
 *   **Sprint 3-4:** Feature Testing & User Acceptance Testing (UAT).
 *   **Sprint 5:** Final Regression, Security, and Performance Testing.
-*   *See the [SRS Document](docs/SRS.md) for the full testing checklist.*
+*   *See the [SRS Document](LetLearnTogether_SRS_v3.md) for the full testing checklist.*
 
 ## 👥 Team Members
 | Role | Name | GitHub Username |
