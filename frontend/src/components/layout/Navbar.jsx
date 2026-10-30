@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
+import InstallAppButton from './InstallAppButton.jsx';
 import './Navbar.css';
 
 function Navbar() {
@@ -71,6 +72,8 @@ function Navbar() {
         >
           About
         </NavLink>
+
+        <InstallAppButton />
 
         {user ? (
           <>

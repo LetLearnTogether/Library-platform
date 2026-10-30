@@ -12,6 +12,7 @@ from app.schemas.api import (
     QuizAttemptResponse,
     QuizAttemptResult,
     QuizCreate,
+    QuizEditorResponse,
     QuizQuestionInput,
     QuizReplace,
     QuizResponse,
@@ -22,6 +23,7 @@ from app.schemas.api import (
 from app.services.api import (
     commit_or_conflict,
     paginate,
+    quiz_editor_output,
     quiz_output,
     require_course,
     require_course_lecturer,
@@ -53,6 +55,29 @@ def set_questions(quiz: Quiz, questions: list[QuizQuestionInput]):
 def authorize_quiz_editor(quiz: Quiz, user: User):
     if user.role == "Lecturer":
         require_course_lecturer(quiz.course, user.id)
+
+
+@router.get("/quizzes/manage", response_model=PageResponse[QuizResponse])
+def list_managed_quizzes(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    course_id: int | None = Query(default=None, ge=1),
+    db: Session = Depends(get_db),
+    editor: User = Depends(creator_roles),
+):
+    validate_pagination(page, page_size)
+    query = (
+        db.query(Quiz)
+        .join(Course)
+        .options(joinedload(Quiz.course), selectinload(Quiz.questions))
+    )
+    if editor.role == "Lecturer":
+        query = query.filter(Course.lecturer_id == editor.id)
+    if course_id is not None:
+        query = query.filter(Quiz.course_id == course_id)
+    result = paginate(query, page, page_size)
+    result["items"] = [quiz_output(quiz) for quiz in result["items"]]
+    return result
 
 
 @router.get("/quizzes", response_model=PageResponse[QuizResponse])
@@ -120,6 +145,24 @@ def get_quiz(quiz_id: int, db: Session = Depends(get_db)):
     if quiz is None:
         raise HTTPException(status_code=404, detail="The requested quiz does not exist.")
     return quiz_output(quiz)
+
+
+@router.get("/quizzes/{quiz_id}/manage", response_model=QuizEditorResponse)
+def get_quiz_for_editing(
+    quiz_id: int,
+    db: Session = Depends(get_db),
+    editor: User = Depends(creator_roles),
+):
+    quiz = (
+        db.query(Quiz)
+        .options(joinedload(Quiz.course), selectinload(Quiz.questions))
+        .filter(Quiz.id == quiz_id)
+        .first()
+    )
+    if quiz is None:
+        raise HTTPException(status_code=404, detail="The requested quiz does not exist.")
+    authorize_quiz_editor(quiz, editor)
+    return quiz_editor_output(quiz)
 
 
 @router.put("/quizzes/{quiz_id}", response_model=QuizResponse)

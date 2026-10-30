@@ -800,6 +800,35 @@ paths:
         default:
           $ref: '#/components/responses/Error'
 
+  /quizzes/manage:
+    get:
+      tags: [Quizzes]
+      summary: List quizzes available for editing
+      description: Lecturer or Admin only. Lecturers see quizzes for their assigned courses; Admins see all quizzes. Draft quizzes are included.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: course_id
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Paginated manageable quizzes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        default:
+          $ref: '#/components/responses/Error'
+
   /quizzes:
     get:
       tags: [Quizzes]
@@ -921,6 +950,29 @@ paths:
       responses:
         '204':
           description: Quiz deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /quizzes/{quiz_id}/manage:
+    parameters:
+      - $ref: '#/components/parameters/QuizId'
+    get:
+      tags: [Quizzes]
+      summary: Get a quiz for editing
+      description: Lecturer assigned to the course or Admin. Includes correct-answer indexes for authorized quiz editors only.
+      responses:
+        '200':
+          description: Quiz content and answer keys for editing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizEditor'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -1554,6 +1606,44 @@ components:
           description: Correct-answer indexes are omitted from this representation.
           items:
             $ref: '#/components/schemas/QuizQuestion'
+
+    QuizEditor:
+      type: object
+      required: [id, course_id, course, title, is_published, questions]
+      properties:
+        id:
+          type: integer
+        course_id:
+          type: integer
+        course:
+          $ref: '#/components/schemas/Course'
+        title:
+          type: string
+        type:
+          type: string
+          nullable: true
+        is_published:
+          type: boolean
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuizQuestionEditor'
+
+    QuizQuestionEditor:
+      type: object
+      required: [id, question_text, options, correct_answer_index]
+      properties:
+        id:
+          type: integer
+        question_text:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+        correct_answer_index:
+          type: integer
+          minimum: 0
 
     QuizAttemptCreate:
       type: object

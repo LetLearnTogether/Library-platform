@@ -195,6 +195,40 @@ def test_quiz_creation_server_scoring_and_attempt_history(api):
     assert incomplete.status_code == 422
 
 
+def test_quiz_management_lists_drafts_and_protects_answer_keys(api):
+    lecturer_headers = login(api, "lecturer@example.com")
+    other_lecturer_headers = login(api, "other-lecturer@example.com")
+    student_headers = login(api, "student@example.com")
+    created = api.post(
+        "/api/v1/quizzes",
+        headers=lecturer_headers,
+        json={
+            "course_id": 1,
+            "title": "Private draft",
+            "is_published": False,
+            "questions": [
+                {"question_text": "Choose A", "options": ["A", "B"], "correct_answer_index": 0}
+            ],
+        },
+    )
+    assert created.status_code == 201, created.text
+    quiz_id = created.json()["id"]
+
+    managed = api.get("/api/v1/quizzes/manage", headers=lecturer_headers)
+    assert managed.status_code == 200
+    assert managed.json()["total_items"] == 1
+    assert managed.json()["items"][0]["is_published"] is False
+    assert "correct_answer_index" not in managed.json()["items"][0]["questions"][0]
+
+    editable = api.get(f"/api/v1/quizzes/{quiz_id}/manage", headers=lecturer_headers)
+    assert editable.status_code == 200
+    assert editable.json()["questions"][0]["correct_answer_index"] == 0
+    assert api.get(f"/api/v1/quizzes/{quiz_id}").status_code == 404
+    assert api.get("/api/v1/quizzes/manage", headers=student_headers).status_code == 403
+    assert api.get("/api/v1/quizzes/manage", headers=other_lecturer_headers).json()["total_items"] == 0
+    assert api.get(f"/api/v1/quizzes/{quiz_id}/manage", headers=other_lecturer_headers).status_code == 403
+
+
 def test_admin_catalog_and_user_management(api):
     admin_headers = login(api, "admin@example.com")
     course = api.post(

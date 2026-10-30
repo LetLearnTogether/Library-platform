@@ -1,0 +1,86 @@
+.install-app-control {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.install-app-button {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid #cbd9ea;
+  border-radius: 9px;
+  background: #f7faff;
+  color: #1c4d88;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.install-app-button:hover {
+  border-color: #9db8dc;
+  background: #edf4fd;
+}
+
+.install-app-popover {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 10px);
+  right: 0;
+  width: min(300px, calc(100vw - 32px));
+  padding: 18px 38px 16px 16px;
+  border: 1px solid #dbe5f1;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 12px 32px rgb(15 23 42 / 16%);
+  color: #334155;
+}
+
+.install-app-popover strong {
+  color: #173b6c;
+  font-size: 14px;
+}
+
+.install-app-popover p {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.install-app-popover .install-app-error {
+  color: #b91c1c;
+}
+
+.install-app-close {
+  position: absolute;
+  top: 7px;
+  right: 8px;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #64748b;
+  font-size: 21px;
+}
+
+.install-app-close:hover {
+  background: #f1f5f9;
+}
+
+@media (max-width: 700px) {
+  .install-app-control {
+    width: 100%;
+  }
+
+  .install-app-button {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}

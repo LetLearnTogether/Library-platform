@@ -31,6 +31,7 @@ Frontend clients should:
 - Use `GET /documents/{document_id}/content?disposition=inline` to view and `disposition=attachment` to download verified files.
 - Read page metadata from list responses and request pages using `page` and `page_size`.
 - Submit quiz answers by question ID and option index; never send a client-computed score.
+- Quiz editors use `GET /quizzes/manage` to list published and draft quizzes in their authorized courses and `GET /quizzes/{quiz_id}/manage` to load a quiz for editing. Only the editor-specific detail response contains correct-answer indexes; public quiz responses must never expose them.
 - Display the error `message` and retain `request_id` for support/debugging.
 
 ## Database integration

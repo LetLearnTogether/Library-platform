@@ -178,6 +178,10 @@ class QuizQuestionResponse(APIModel):
     options: list[str]
 
 
+class QuizQuestionEditorResponse(QuizQuestionResponse):
+    correct_answer_index: int
+
+
 class QuizCreate(APIModel):
     course_id: int = Field(gt=0)
     title: str = Field(min_length=1, max_length=255)
@@ -201,6 +205,16 @@ class QuizResponse(APIModel):
     type: str | None
     is_published: bool
     questions: list[QuizQuestionResponse]
+
+
+class QuizEditorResponse(APIModel):
+    id: int
+    course_id: int
+    course: CourseResponse
+    title: str
+    type: str | None
+    is_published: bool
+    questions: list[QuizQuestionEditorResponse]
 
 
 class QuizQuestionAnswer(APIModel):

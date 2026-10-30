@@ -8,7 +8,7 @@ from sqlalchemy.orm import Query, Session
 
 from app.core.config import PUBLIC_API_BASE_URL, PUBLIC_FRONTEND_URL
 from app.models import Course, Document, Quiz, Report
-from app.schemas.api import CourseResponse, DocumentResponse, QuizResponse, ReportResponse
+from app.schemas.api import CourseResponse, DocumentResponse, QuizEditorResponse, QuizResponse, ReportResponse
 
 
 def paginate(query: Query, page: int, page_size: int) -> dict[str, Any]:
@@ -61,6 +61,26 @@ def quiz_output(quiz: Quiz) -> dict[str, Any]:
         is_published=quiz.is_published,
         questions=[
             {"id": question.id, "question_text": question.question_text, "options": question.options}
+            for question in quiz.questions
+        ],
+    ).model_dump()
+
+
+def quiz_editor_output(quiz: Quiz) -> dict[str, Any]:
+    return QuizEditorResponse(
+        id=quiz.id,
+        course_id=quiz.course_id,
+        course=course_output(quiz.course),
+        title=quiz.title,
+        type=quiz.type,
+        is_published=quiz.is_published,
+        questions=[
+            {
+                "id": question.id,
+                "question_text": question.question_text,
+                "options": question.options,
+                "correct_answer_index": question.correct_answer_index,
+            }
             for question in quiz.questions
         ],
     ).model_dump()

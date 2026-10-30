@@ -1,17 +1,22 @@
 
 import { useEffect, useState } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { AuthProvider } from './auth/AuthProvider';
+import { useAuth } from './auth/useAuth';
 import Navbar from './components/layout/Navbar.jsx';
 import AuthenticatedLayout from './components/layout/AuthenticatedLayout.jsx';
 import ScrollToHash from './components/layout/ScrollToHash.jsx';
 import RequireAuth from './components/auth/RequireAuth.jsx';
-import { useAuth } from './auth/useAuth.js';
 import { apiRequest, getDocumentContentUrl, getVerificationUrl } from './lib/api.js';
+import DocumentReportDialog from './components/documents/DocumentReportDialog.jsx';
+import LibraryFolderBrowser from './components/documents/LibraryFolderBrowser.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import RegisterPage from './pages/RegisterPage.jsx';
 import StudentDashboard from './pages/StudentDashboard.jsx';
 import QuizPage from './pages/QuizPage.jsx';
+import QuizHistoryPage from './pages/QuizHistoryPage.jsx';
+import DocumentHistoryPage from './pages/DocumentHistoryPage.jsx';
+import QuizManagementPage from './pages/QuizManagementPage.jsx';
 import VerificationPage from './pages/VerificationPage';
 import UploadPage from './pages/UploadPage.jsx';
 import StaffReviewPage from './pages/StaffReviewPage.jsx';
@@ -31,6 +36,10 @@ const documentTypes = [
 ];
 
 function LibraryPage({ portal = false }) {
+  const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { courseCode: folderCourseCode, year: folderYear, semester: folderSemester, documentType: folderDocumentType } = useParams();
   const [search, setSearch] = useState('');
   const [course, setCourse] = useState('All');
   const [year, setYear] = useState('All');
@@ -38,12 +47,26 @@ function LibraryPage({ portal = false }) {
   const [documentType, setDocumentType] = useState('All');
   const [documents, setDocuments] = useState([]);
   const [courseOptions, setCourseOptions] = useState([]);
+  const [courseOptionsLoading, setCourseOptionsLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [courseError, setCourseError] = useState('');
+  const [reportingDocument, setReportingDocument] = useState(null);
+  const [reportedDocumentIds, setReportedDocumentIds] = useState(() => new Set());
+  const [reportMessage, setReportMessage] = useState('');
+  const isFolderRoute = Boolean(folderCourseCode);
+  const selectedCourse = isFolderRoute ? folderCourseCode : course;
+  const selectedYear = isFolderRoute ? folderYear || 'All' : year;
+  const routeSemester = folderSemester?.toLowerCase().replace(/-semester$/, '');
+  const selectedSemester = isFolderRoute
+    ? routeSemester === 'first' ? 'First' : routeSemester === 'second' ? 'Second' : folderSemester || 'All'
+    : semester;
+  const selectedDocumentType = isFolderRoute
+    ? documentTypes.find((type) => type.toLowerCase() === folderDocumentType?.toLowerCase()) || folderDocumentType || 'All'
+    : documentType;
 
   useEffect(() => {
     let active = true;
@@ -53,6 +76,9 @@ function LibraryPage({ portal = false }) {
       })
       .catch((requestError) => {
         if (active) setCourseError(requestError.message || 'Course filters are temporarily unavailable.');
+      })
+      .finally(() => {
+        if (active) setCourseOptionsLoading(false);
       });
     return () => { active = false; };
   }, []);
@@ -62,10 +88,10 @@ function LibraryPage({ portal = false }) {
     const timer = window.setTimeout(() => {
       const params = new URLSearchParams({ page: String(page), page_size: '20' });
       if (search.trim()) params.set('q', search.trim());
-      if (course !== 'All') params.set('course_code', course);
-      if (year !== 'All') params.set('year', year);
-      if (semester !== 'All') params.set('semester', semester);
-      if (documentType !== 'All') params.set('document_type', documentType);
+      if (selectedCourse !== 'All') params.set('course_code', selectedCourse);
+      if (selectedYear !== 'All') params.set('year', selectedYear);
+      if (selectedSemester !== 'All') params.set('semester', selectedSemester);
+      if (selectedDocumentType !== 'All') params.set('document_type', selectedDocumentType);
 
       setLoading(true);
       setError('');
@@ -89,17 +115,24 @@ function LibraryPage({ portal = false }) {
       active = false;
       window.clearTimeout(timer);
     };
-  }, [search, course, year, semester, documentType, page]);
+  }, [search, selectedCourse, selectedYear, selectedSemester, selectedDocumentType, page]);
 
   const courses = [...new Set(courseOptions.map((item) => item.course_code))].sort();
   const years = [...new Set(courseOptions.map((item) => item.year))].sort((a, b) => b - a);
 
   function resetFilters() {
+    if (isFolderRoute) navigate('/library');
     setSearch('');
     setCourse('All');
     setYear('All');
     setSemester('All');
     setDocumentType('All');
+    setPage(1);
+  }
+
+  function changeFilter(setter, value) {
+    if (isFolderRoute) navigate('/library');
+    setter(value);
     setPage(1);
   }
 
@@ -115,8 +148,21 @@ function LibraryPage({ portal = false }) {
     link.remove();
   }
 
+  function handleReportSubmitted(documentId) {
+    setReportedDocumentIds((current) => new Set(current).add(documentId));
+    setReportingDocument(null);
+    setReportMessage('Thank you. Your report has been sent to the moderation team.');
+  }
+
   return (
     <>
+      {reportingDocument && (
+        <DocumentReportDialog
+          document={reportingDocument}
+          onClose={() => setReportingDocument(null)}
+          onSubmitted={handleReportSubmitted}
+        />
+      )}
       <main>
         {!portal && <section className="hero-section">
           <div className="hero-content">
@@ -169,6 +215,16 @@ function LibraryPage({ portal = false }) {
             </div>
           </div>
 
+          <LibraryFolderBrowser
+            courses={courseOptions}
+            loading={courseOptionsLoading}
+            error={courseError}
+            courseCode={folderCourseCode}
+            year={folderYear}
+            semester={folderSemester}
+            documentType={folderDocumentType}
+          />
+
           <div className="search-panel">
             <label className="search-box">
               <span aria-hidden="true">⌕</span>
@@ -194,8 +250,8 @@ function LibraryPage({ portal = false }) {
             <label className="filter-field">
               <span>Course</span>
               <select
-                value={course}
-                onChange={(event) => { setCourse(event.target.value); setPage(1); }}
+                value={selectedCourse}
+                onChange={(event) => changeFilter(setCourse, event.target.value)}
               >
                 <option value="All">All courses</option>
                 {courses.map((courseCode) => (
@@ -209,8 +265,8 @@ function LibraryPage({ portal = false }) {
             <label className="filter-field">
               <span>Academic year</span>
               <select
-                value={year}
-                onChange={(event) => { setYear(event.target.value); setPage(1); }}
+                value={selectedYear}
+                onChange={(event) => changeFilter(setYear, event.target.value)}
               >
                 <option value="All">All years</option>
                 {years.map((academicYear) => (
@@ -224,8 +280,8 @@ function LibraryPage({ portal = false }) {
             <label className="filter-field">
               <span>Semester</span>
               <select
-                value={semester}
-                onChange={(event) => { setSemester(event.target.value); setPage(1); }}
+                value={selectedSemester}
+                onChange={(event) => changeFilter(setSemester, event.target.value)}
               >
                 <option value="All">All semesters</option>
                 <option value="First">First semester</option>
@@ -236,8 +292,8 @@ function LibraryPage({ portal = false }) {
             <label className="filter-field">
               <span>Document type</span>
               <select
-                value={documentType}
-                onChange={(event) => { setDocumentType(event.target.value); setPage(1); }}
+                value={selectedDocumentType}
+                onChange={(event) => changeFilter(setDocumentType, event.target.value)}
               >
                 <option value="All">All types</option>
                 {documentTypes.map((type) => (
@@ -249,6 +305,7 @@ function LibraryPage({ portal = false }) {
             </label>
           </div>
           {courseError && <p className="app-status" role="status">{courseError}</p>}
+          {reportMessage && <p className="app-status library-report-status" role="status">{reportMessage}</p>}
 
           <div className="library-notice">
             <span className="notice-icon" aria-hidden="true">✓</span>
@@ -311,6 +368,25 @@ function LibraryPage({ portal = false }) {
                       Download
                     </button>
                   </div>
+                  {reportedDocumentIds.has(document.id) ? (
+                    <p className="document-report-submitted" role="status">Report submitted</p>
+                  ) : user ? (
+                    <button
+                      className="document-report-trigger"
+                      type="button"
+                      onClick={() => { setReportMessage(''); setReportingDocument(document); }}
+                    >
+                      Report document
+                    </button>
+                  ) : (
+                    <Link
+                      className="document-report-trigger"
+                      to="/login"
+                      state={{ from: location }}
+                    >
+                      Sign in to report
+                    </Link>
+                  )}
                 </article>
               ))}
             </div>
@@ -388,7 +464,14 @@ function AppContent() {
           <Route path="/login" element={<Navigate to={roleHome(user.role)} replace />} />
           <Route path="/register" element={<Navigate to={roleHome(user.role)} replace />} />
           <Route path="/library" element={<LibraryPage portal />} />
+          <Route path="/courses/:courseCode/:year/:semester/:documentType" element={<LibraryPage portal />} />
+          <Route path="/courses/:courseCode/:year/:semester" element={<LibraryPage portal />} />
+          <Route path="/courses/:courseCode/:year" element={<LibraryPage portal />} />
+          <Route path="/courses/:courseCode" element={<LibraryPage portal />} />
           <Route path="/student-dashboard" element={<RequireAuth roles={['Student']}><StudentDashboard /></RequireAuth>} />
+          <Route path="/quiz-history" element={<RequireAuth roles={['Student']}><QuizHistoryPage /></RequireAuth>} />
+          <Route path="/document-history" element={<RequireAuth roles={['Student']}><DocumentHistoryPage /></RequireAuth>} />
+          <Route path="/quiz-management" element={<RequireAuth roles={['Lecturer', 'Admin']}><QuizManagementPage /></RequireAuth>} />
           <Route path="/upload" element={<RequireAuth><UploadPage /></RequireAuth>} />
           <Route path="/admin" element={<RequireAuth roles={['Admin']}><AdminDashboard /></RequireAuth>} />
           <Route path="/admin/accounts" element={<RequireAuth roles={['Admin']}><AdminAccountsPage /></RequireAuth>} />
@@ -411,9 +494,16 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<LibraryPage />} />
         <Route path="/library" element={<LibraryPage />} />
+        <Route path="/courses/:courseCode/:year/:semester/:documentType" element={<LibraryPage />} />
+        <Route path="/courses/:courseCode/:year/:semester" element={<LibraryPage />} />
+        <Route path="/courses/:courseCode/:year" element={<LibraryPage />} />
+        <Route path="/courses/:courseCode" element={<LibraryPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/student-dashboard" element={<RequireAuth roles={['Student']}><StudentDashboard /></RequireAuth>} />
+        <Route path="/quiz-history" element={<RequireAuth roles={['Student']}><QuizHistoryPage /></RequireAuth>} />
+        <Route path="/document-history" element={<RequireAuth roles={['Student']}><DocumentHistoryPage /></RequireAuth>} />
+        <Route path="/quiz-management" element={<RequireAuth roles={['Lecturer', 'Admin']}><QuizManagementPage /></RequireAuth>} />
         <Route path="/upload" element={<RequireAuth><UploadPage /></RequireAuth>} />
         <Route path="/admin" element={<RequireAuth roles={['Admin']}><AdminDashboard /></RequireAuth>} />
         <Route path="/admin/accounts" element={<RequireAuth roles={['Admin']}><AdminAccountsPage /></RequireAuth>} />

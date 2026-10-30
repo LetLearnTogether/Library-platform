@@ -1,20 +1,24 @@
 import { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
+import InstallAppButton from './InstallAppButton.jsx';
 import './AuthenticatedLayout.css';
 
 function AuthenticatedLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, logout } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
 
   const isAdmin = user.role === 'Admin';
   const isStaff = ['Lecturer', 'Moderator', 'Admin'].includes(user.role);
+  const isStudent = user.role === 'Student';
   const links = isAdmin
     ? [
       { to: '/admin', label: 'Overview', icon: '▦', end: true },
       { to: '/admin/accounts', label: 'Accounts', icon: '♙' },
       { to: '/admin/courses', label: 'Courses', icon: '▤' },
+      { to: '/quiz-management', label: 'Quiz management', icon: '✎' },
       { to: '/staff', label: 'Review & reports', icon: '✓' },
       { to: '/library', label: 'Document library', icon: '▤' },
       { to: '/upload', label: 'Upload document', icon: '↑' },
@@ -22,6 +26,7 @@ function AuthenticatedLayout({ children }) {
     : isStaff
       ? [
         { to: '/staff', label: 'Review workspace', icon: '✓', end: true },
+        { to: '/quiz-management', label: 'Quiz management', icon: '✎' },
         { to: '/library', label: 'Document library', icon: '▤' },
         { to: '/upload', label: 'Upload document', icon: '↑' },
       ]
@@ -29,6 +34,8 @@ function AuthenticatedLayout({ children }) {
         { to: '/student-dashboard', label: 'Overview', icon: '▦', end: true },
         { to: '/library', label: 'Document library', icon: '▤' },
         { to: '/quizzes', label: 'Quizzes', icon: '✎' },
+        { to: '/quiz-history', label: 'Quiz history', icon: '◷' },
+        { to: '/document-history', label: 'My submissions', icon: '▤' },
         { to: '/upload', label: 'Upload document', icon: '↑' },
       ];
 
@@ -39,7 +46,7 @@ function AuthenticatedLayout({ children }) {
   }
 
   return (
-    <div className="portal-shell">
+    <div className={`portal-shell${isStudent ? ' portal-shell-student' : ''}`}>
       <header className="portal-header">
         <button
           className="portal-menu-toggle"
@@ -54,6 +61,7 @@ function AuthenticatedLayout({ children }) {
           <span className="portal-brand-mark">L</span>
           <span><strong>LetLearnTogether</strong><small>Learning portal</small></span>
         </NavLink>
+        <InstallAppButton />
         <div className="portal-account">
           <span className="portal-avatar" aria-hidden="true">{user.name.trim().charAt(0).toUpperCase()}</span>
           <span className="portal-account-copy"><strong>{user.name}</strong><small>{user.role}</small></span>
@@ -97,6 +105,27 @@ function AuthenticatedLayout({ children }) {
 
         <main className="portal-main">{children}</main>
       </div>
+      {isStudent && (
+        <nav className="portal-mobile-nav" aria-label="Student navigation">
+          {[
+            { to: '/library', label: 'Library', icon: '▤', active: location.pathname === '/library' || location.pathname.startsWith('/courses/') },
+            { to: '/quizzes', label: 'Quizzes', icon: '✎' },
+            { to: '/upload', label: 'Upload', icon: '↑', active: location.pathname === '/upload' || location.pathname === '/document-history' },
+            { to: '/student-dashboard', label: 'Me', icon: '♙', end: true },
+          ].map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              className={({ isActive }) => `portal-mobile-nav-link${isActive || item.active ? ' portal-mobile-nav-link-active' : ''}`}
+              onClick={() => setSidebarOpen(false)}
+            >
+              <span className="portal-mobile-nav-icon" aria-hidden="true">{item.icon}</span>
+              <span>{item.label}</span>
+            </NavLink>
+          ))}
+        </nav>
+      )}
     </div>
   );
 }

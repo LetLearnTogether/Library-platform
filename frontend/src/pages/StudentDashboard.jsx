@@ -73,7 +73,10 @@ export default function StudentDashboard() {
           </section>
 
           <section className="dashboard-section">
-            <div className="dashboard-section-heading"><div><h2>Your recent submissions</h2><p>Track document review status.</p></div></div>
+            <div className="dashboard-section-heading">
+              <div><h2>Your recent submissions</h2><p>Track document review status.</p></div>
+              <Link to="/document-history" className="dashboard-text-link">View all submissions →</Link>
+            </div>
             <div className="recent-documents">
               {documents.length ? documents.map((document) => (
                 <article className="recent-document" key={document.id}>
@@ -86,7 +89,10 @@ export default function StudentDashboard() {
           </section>
 
           <section className="dashboard-section">
-            <div className="dashboard-section-heading"><div><h2>Recent quiz attempts</h2><p>Your server-scored quiz results.</p></div></div>
+            <div className="dashboard-section-heading">
+              <div><h2>Recent quiz attempts</h2><p>Your server-scored quiz results.</p></div>
+              <Link to="/quiz-history" className="dashboard-text-link">View full history →</Link>
+            </div>
             <div className="recent-documents">
               {attempts.length ? attempts.map((attempt) => (
                 <article className="recent-document" key={attempt.id}>

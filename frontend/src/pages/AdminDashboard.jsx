@@ -27,6 +27,14 @@ export default function AdminDashboard() {
           </span>
           <span className="admin-management-arrow" aria-hidden="true">›</span>
         </Link>
+        <Link className="admin-management-card" to="/quiz-management">
+          <span className="admin-management-icon" aria-hidden="true">✎</span>
+          <span>
+            <strong>Quiz management</strong>
+            <small>Create, edit, publish, and remove practice quizzes.</small>
+          </span>
+          <span className="admin-management-arrow" aria-hidden="true">›</span>
+        </Link>
         <Link className="admin-management-card" to="/staff">
           <span className="admin-management-icon" aria-hidden="true">✓</span>
           <span>

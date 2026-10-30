@@ -227,6 +227,10 @@
   display: none;
 }
 
+.portal-mobile-nav {
+  display: none;
+}
+
 @media (max-width: 760px) {
   .portal-header {
     height: 68px;
@@ -312,5 +316,58 @@
   .portal-main {
     width: 100%;
     padding: 20px 16px 36px;
+  }
+
+  .portal-shell-student .portal-main {
+    padding-bottom: calc(92px + env(safe-area-inset-bottom));
+  }
+
+  .portal-mobile-nav {
+    position: fixed;
+    z-index: 45;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding: 7px 8px calc(7px + env(safe-area-inset-bottom));
+    border-top: 1px solid #e2e8f0;
+    background: rgb(255 255 255 / 97%);
+    box-shadow: 0 -6px 20px rgb(15 23 42 / 7%);
+    backdrop-filter: blur(12px);
+  }
+
+  .portal-mobile-nav-link {
+    display: grid;
+    min-height: 54px;
+    align-content: center;
+    justify-items: center;
+    gap: 3px;
+    border-radius: 9px;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 650;
+    text-decoration: none;
+  }
+
+  .portal-mobile-nav-icon {
+    font-size: 19px;
+    line-height: 1;
+  }
+
+  .portal-mobile-nav-link-active {
+    background: #edf4fd;
+    color: #1c4d88;
+  }
+
+  .portal-header .install-app-control {
+    width: auto;
+  }
+
+  .portal-header .install-app-button {
+    width: auto;
+    min-height: 35px;
+    padding: 0 9px;
+    font-size: 12px;
   }
 }
