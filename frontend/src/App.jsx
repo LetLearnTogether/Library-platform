@@ -35,6 +35,7 @@ import LecturerDashboard from './pages/LecturerDashboard.jsx';
 import StudentCoursesPage from './pages/StudentCoursesPage.jsx';
 import CourseRosterPage from './pages/CourseRosterPage.jsx';
 import './App.css';
+import './components/layout/PortalTheme.css';
 
 const currentYear = new Date().getFullYear();
 

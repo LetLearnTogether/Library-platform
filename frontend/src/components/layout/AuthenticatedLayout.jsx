@@ -6,6 +6,9 @@ import './AuthenticatedLayout.css';
 
 function AuthenticatedLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [theme, setTheme] = useState(() => (
+    window.localStorage.getItem('letlearn-theme') === 'dark' ? 'dark' : 'light'
+  ));
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -60,8 +63,14 @@ function AuthenticatedLayout({ children }) {
     navigate('/', { replace: true });
   }
 
+  function toggleTheme() {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(nextTheme);
+    window.localStorage.setItem('letlearn-theme', nextTheme);
+  }
+
   return (
-    <div className={`portal-shell${isStudent ? ' portal-shell-student' : ''}`}>
+    <div className={`portal-shell${isStudent ? ' portal-shell-student' : ''}`} data-theme={theme}>
       <header className="portal-header">
         <button
           className="portal-menu-toggle"
@@ -102,6 +111,16 @@ function AuthenticatedLayout({ children }) {
               </NavLink>
             ))}
           </nav>
+          <button
+            type="button"
+            className="portal-theme-toggle"
+            onClick={toggleTheme}
+            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            aria-pressed={theme === 'dark'}
+          >
+            <span className="portal-theme-icon" aria-hidden="true">{theme === 'dark' ? '☀' : '☾'}</span>
+            <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+          </button>
           <div className="portal-sidebar-bottom">
             <img className="portal-support-mark" src="/letlearn-together-mark.png" alt="" />
             <strong>Learn together</strong>
