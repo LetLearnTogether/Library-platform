@@ -11,6 +11,7 @@ function AuthenticatedLayout({ children }) {
   const navigate = useNavigate();
 
   const isAdmin = user.role === 'Admin';
+  const isModerator = user.role === 'Moderator';
   const isStaff = ['Lecturer', 'Moderator', 'Admin'].includes(user.role);
   const isStudent = user.role === 'Student';
   const links = isAdmin
@@ -32,8 +33,13 @@ function AuthenticatedLayout({ children }) {
         { to: '/quiz-management', label: 'Course quizzes', icon: '✎' },
         { to: '/library', label: 'Document library', icon: '▤' },
       ]
-      : isStaff
+    : isModerator
       ? [
+        { to: '/staff', label: 'Moderation center', icon: '✓', end: true },
+        { to: '/library', label: 'Document library', icon: '▤' },
+      ]
+    : isStaff
+    ? [
         { to: '/staff', label: 'Review workspace', icon: '✓', end: true },
         { to: '/quiz-management', label: 'Quiz management', icon: '✎' },
         { to: '/library', label: 'Document library', icon: '▤' },

@@ -4,6 +4,7 @@ import { apiRequest } from '../lib/api';
 
 const reportStatuses = ['In Review', 'Resolved', 'Dismissed'];
 const reportFilters = ['All', 'Open', ...reportStatuses];
+const reportSummaryStatuses = ['Open', ...reportStatuses];
 const PAGE_SIZE = 20;
 const REVIEW_PAGE_SIZE = 20;
 
@@ -15,12 +16,15 @@ export default function StaffReviewPage() {
   const [reviewTotalItems, setReviewTotalItems] = useState(0);
   const [reviewNotes, setReviewNotes] = useState({});
   const [reports, setReports] = useState([]);
+  const [reportNotes, setReportNotes] = useState({});
+  const [reportCounts, setReportCounts] = useState(null);
   const [reportStatus, setReportStatus] = useState('Open');
   const [reportPageIndex, setReportPageIndex] = useState(1);
   const [reportTotalPages, setReportTotalPages] = useState(0);
   const [reportTotalItems, setReportTotalItems] = useState(0);
   const [reportsLoading, setReportsLoading] = useState(true);
   const [revokedDocumentIds, setRevokedDocumentIds] = useState(() => new Set());
+  const [removedDocumentIds, setRemovedDocumentIds] = useState(() => new Set());
   const [loading, setLoading] = useState(true);
   const [workingId, setWorkingId] = useState(null);
   const [error, setError] = useState('');
@@ -50,12 +54,23 @@ export default function StaffReviewPage() {
     if (reportStatus !== 'All') reportParams.set('status', reportStatus);
     const reportPage = await apiRequest(`/reports?${reportParams}`);
     setReports(reportPage.items);
+    setReportNotes(Object.fromEntries(reportPage.items.map((report) => [report.id, report.moderator_note || ''])));
     setReportTotalPages(reportPage.total_pages);
     setReportTotalItems(reportPage.total_items);
     if (reportPageIndex > Math.max(1, reportPage.total_pages)) {
       setReportPageIndex(Math.max(1, reportPage.total_pages));
     }
   }, [canManageReports, reportPageIndex, reportStatus]);
+
+  const loadReportCounts = useCallback(async () => {
+    if (!canManageReports) return {};
+    const counts = await Promise.all(reportSummaryStatuses.map(async (status) => {
+      const params = new URLSearchParams({ page: '1', page_size: '1', status });
+      const result = await apiRequest(`/reports?${params}`);
+      return [status, result.total_items];
+    }));
+    return Object.fromEntries(counts);
+  }, [canManageReports]);
 
   useEffect(() => {
     let active = true;
@@ -68,6 +83,21 @@ export default function StaffReviewPage() {
       });
     return () => { active = false; };
   }, [refreshQueue, refreshReports]);
+
+  useEffect(() => {
+    let active = true;
+    loadReportCounts()
+      .then((counts) => { if (active) setReportCounts(counts); })
+      .catch((requestError) => { if (active) setError(requestError.message); });
+    return () => { active = false; };
+  }, [loadReportCounts]);
+
+  function filterReportsByStatus(status) {
+    setReportsLoading(true);
+    setReportStatus(status);
+    setReportPageIndex(1);
+    document.getElementById('document-reports')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 
   async function reviewDocument(documentId, action) {
     const reviewNote = (reviewNotes[documentId] || '').trim();
@@ -104,12 +134,15 @@ export default function StaffReviewPage() {
     try {
       await apiRequest(`/reports/${reportId}`, {
         method: 'PUT',
-        body: { status, moderator_note: moderatorNote || null },
+        body: { status, moderator_note: moderatorNote.trim() || null },
       });
-      setMessage('Report status updated.');
+      setMessage(status === reports.find((report) => report.id === reportId)?.status
+        ? 'Moderator note saved.'
+        : 'Report status updated.');
       setReportsLoading(true);
       try {
         await refreshReports();
+        setReportCounts(await loadReportCounts());
       } catch (requestError) {
         setError(`The report was updated, but the list could not refresh: ${requestError.message}`);
       } finally {
@@ -133,7 +166,8 @@ export default function StaffReviewPage() {
       setMessage(`Document #${documentId} verification stamp revoked. It is no longer available in the public library.`);
       try {
         setReportsLoading(true);
-        await Promise.all([refreshQueue(), refreshReports()]);
+        const [, , counts] = await Promise.all([refreshQueue(), refreshReports(), loadReportCounts()]);
+        setReportCounts(counts);
       } catch (requestError) {
         setError(`The stamp was revoked, but the moderation list could not refresh: ${requestError.message}`);
       } finally {
@@ -141,6 +175,22 @@ export default function StaffReviewPage() {
       }
     } catch (requestError) {
       setError(requestError.message || 'The verification stamp could not be revoked.');
+    } finally {
+      setWorkingId(null);
+    }
+  }
+
+  async function removeDocument(documentId) {
+    if (!window.confirm('Permanently remove this document file? The document will no longer be available to anyone.')) return;
+    setWorkingId(`remove-${documentId}`);
+    setError('');
+    setMessage('');
+    try {
+      await apiRequest(`/documents/${documentId}`, { method: 'DELETE' });
+      setRemovedDocumentIds((current) => new Set(current).add(documentId));
+      setMessage(`Document #${documentId} was removed.`);
+    } catch (requestError) {
+      setError(requestError.message || 'The document could not be removed.');
     } finally {
       setWorkingId(null);
     }
@@ -171,17 +221,41 @@ export default function StaffReviewPage() {
   return (
     <main className="staff-page">
       <header className="staff-heading">
-        <p className="eyebrow">STAFF WORKSPACE · {user.role}</p>
-        <h1>{user.role === 'Lecturer' ? 'Course submission review' : 'Review and moderation'}</h1>
+        <p className="eyebrow">{user.role === 'Moderator' ? 'PLATFORM-WIDE MODERATION' : `STAFF WORKSPACE · ${user.role}`}</p>
+        <h1>{user.role === 'Lecturer' ? 'Course submission review' : user.role === 'Moderator' ? 'Moderation center' : 'Review and moderation'}</h1>
         <p>{user.role === 'Lecturer'
           ? 'Review student submissions for courses assigned to you.'
-          : 'Review pending submissions and protect the trusted learning library.'}</p>
+          : user.role === 'Moderator'
+            ? 'Review submissions across all courses, resolve content reports, and withdraw or remove material that violates platform standards.'
+            : 'Review pending submissions and protect the trusted learning library.'}</p>
       </header>
       {error && <p className="app-status" role="alert">{error}</p>}
       {message && <p className="app-status" role="status">{message}</p>}
+      {user.role === 'Moderator' && (
+        <section className="moderation-overview" aria-label="Moderation overview">
+          <a className="moderation-stat moderation-stat-queue" href="#review-queue">
+            <span>Pending submissions</span>
+            <strong>{loading ? '—' : reviewTotalItems}</strong>
+            <small>Across all courses</small>
+          </a>
+          {reportSummaryStatuses.map((status) => (
+            <button
+              type="button"
+              key={status}
+              className={`moderation-stat moderation-stat-${status.toLowerCase().replaceAll(' ', '-')}${reportStatus === status ? ' moderation-stat-active' : ''}`}
+              aria-pressed={reportStatus === status}
+              onClick={() => filterReportsByStatus(status)}
+            >
+              <span>{status} reports</span>
+              <strong>{reportCounts ? reportCounts[status] : '—'}</strong>
+              <small>{reportStatus === status ? 'Currently selected' : 'View reports'}</small>
+            </button>
+          ))}
+        </section>
+      )}
       {loading ? <p className="app-status" role="status">Loading review queue…</p> : (
         <section className="staff-section">
-          <div className="staff-review-queue-heading">
+          <div className="staff-review-queue-heading" id="review-queue">
             <div>
               <h2>Documents awaiting review</h2>
               <p>{reviewTotalItems} {reviewTotalItems === 1 ? 'submission' : 'submissions'}</p>
@@ -250,7 +324,7 @@ export default function StaffReviewPage() {
 
       {canManageReports && (
         <section className="staff-section">
-          <div className="staff-reports-heading">
+          <div className="staff-reports-heading" id="document-reports">
             <div>
               <h2>Document reports</h2>
               <p>{reportTotalItems} {reportTotalItems === 1 ? 'report' : 'reports'}</p>
@@ -274,17 +348,43 @@ export default function StaffReviewPage() {
           ) : reports.length ? reports.map((report) => (
             <article className="staff-card" key={report.id}>
               <div>
-                <span className="course-code">Document #{report.document_id}</span>
+                <span className="course-code">{report.document.course.course_code} · Document #{report.document_id}</span>
                 <h3>Report #{report.id}</h3>
+                <p><strong>{report.document.filename}</strong> · {report.document.document_type}</p>
+                <p>{report.document.course.course_title} · {report.document.course.year} · {report.document.course.semester}</p>
+                <p>Reported by {report.submitter_name}</p>
                 <span className={`staff-report-status status-${report.status.toLowerCase().replaceAll(' ', '-')}`}>{report.status}</span>
                 <p>{report.reason}</p>
-                {report.moderator_note && <p>Moderator note: {report.moderator_note}</p>}
                 <p>Submitted {new Date(report.created_at).toLocaleString()}</p>
-                <a href={`/api/v1/documents/${report.document_id}/content?disposition=inline`} target="_blank" rel="noreferrer">Open verified document</a>
+                {removedDocumentIds.has(report.document_id)
+                  ? <span>Document file removed</span>
+                  : <a href={`/api/v1/documents/${report.document_id}/content?disposition=inline`} target="_blank" rel="noreferrer">Open verified document</a>}
+                <label className="staff-review-note">
+                  Moderator note
+                  <textarea
+                    value={reportNotes[report.id] ?? ''}
+                    maxLength={2000}
+                    rows={3}
+                    placeholder="Record the moderation decision or follow-up."
+                    onChange={(event) => setReportNotes((current) => ({
+                      ...current,
+                      [report.id]: event.target.value,
+                    }))}
+                  />
+                  <small>{(reportNotes[report.id] ?? '').length}/2000</small>
+                </label>
               </div>
               <div className="staff-actions">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  disabled={Boolean(workingId)}
+                  onClick={() => updateReport(report.id, report.status, reportNotes[report.id] ?? '')}
+                >
+                  Save note
+                </button>
                 {reportStatuses.filter((status) => status !== report.status).map((status) => (
-                  <button type="button" key={status} className="secondary-button" disabled={Boolean(workingId)} onClick={() => updateReport(report.id, status, report.moderator_note)}>{status}</button>
+                  <button type="button" key={status} className="secondary-button" disabled={Boolean(workingId)} onClick={() => updateReport(report.id, status, reportNotes[report.id] ?? '')}>{status}</button>
                 ))}
                 <button
                   type="button"
@@ -293,6 +393,14 @@ export default function StaffReviewPage() {
                   onClick={() => revokeDocument(report.document_id)}
                 >
                   {revokedDocumentIds.has(report.document_id) ? 'Stamp revoked' : 'Revoke verification'}
+                </button>
+                <button
+                  type="button"
+                  className="staff-revoke-button"
+                  disabled={Boolean(workingId) || removedDocumentIds.has(report.document_id)}
+                  onClick={() => removeDocument(report.document_id)}
+                >
+                  {removedDocumentIds.has(report.document_id) ? 'File removed' : 'Remove document'}
                 </button>
               </div>
             </article>

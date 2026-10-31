@@ -198,3 +198,6 @@ class Report(Base):
     moderator_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    document: Mapped[Document] = relationship()
+    submitter: Mapped[User] = relationship()

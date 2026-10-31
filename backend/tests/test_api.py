@@ -275,6 +275,32 @@ def test_documents_moderator_approval_verification_and_file(api):
     assert api.get(f"/api/v1/documents/{document['id']}/content").status_code == 404
 
 
+def test_moderator_can_remove_document_file(api):
+    student_headers = login(api, "student@example.com")
+    moderator_headers = login(api, "moderator@example.com")
+    upload = api.post(
+        "/api/v1/documents",
+        headers=student_headers,
+        data={"course_id": "1", "document_type": "Assignment"},
+        files={"file": ("reported.pdf", BytesIO(b"%PDF-1.7\nreported"), "application/pdf")},
+    )
+    assert upload.status_code == 201, upload.text
+    document_id = upload.json()["id"]
+    approved = api.put(
+        f"/api/v1/documents/{document_id}/review",
+        headers=moderator_headers,
+        json={"action": "approve"},
+    )
+    assert approved.status_code == 200, approved.text
+    assert api.get(f"/api/v1/documents/{document_id}/content").status_code == 200
+
+    removed = api.delete(f"/api/v1/documents/{document_id}", headers=moderator_headers)
+
+    assert removed.status_code == 204
+    assert api.get(f"/api/v1/documents/{document_id}/content").status_code == 404
+    assert api.get(f"/api/v1/documents/{document_id}").status_code == 404
+
+
 def test_upload_validation_and_course_scoped_review(api):
     student_headers = login(api, "student@example.com")
     lecturer_headers = login(api, "lecturer@example.com")
@@ -828,8 +854,16 @@ def test_document_reports_and_quiz_management(api):
         json={"reason": "The material may be inaccurate."},
     )
     assert report.status_code == 201, report.text
+    report_details = report.json()
+    assert report_details["submitter_name"] == "Student"
+    assert report_details["document"]["filename"] == "assignment.pdf"
+    assert report_details["document"]["document_type"] == "Assignment"
+    assert report_details["document"]["status"] == "Under Review"
+    assert report_details["document"]["course"]["course_code"] == "CS101"
     report_id = report.json()["id"]
-    assert api.get("/api/v1/reports", headers=moderator_headers, params={"status": "Open"}).json()["total_items"] == 1
+    report_page = api.get("/api/v1/reports", headers=moderator_headers, params={"status": "Open"})
+    assert report_page.json()["total_items"] == 1
+    assert report_page.json()["items"][0]["document"]["filename"] == "assignment.pdf"
     updated_report = api.put(
         f"/api/v1/reports/{report_id}",
         headers=moderator_headers,

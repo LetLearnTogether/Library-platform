@@ -310,10 +310,20 @@ class ReportUpdate(APIModel):
     moderator_note: str | None = Field(default=None, max_length=2000)
 
 
+class ReportDocumentSummary(APIModel):
+    id: int
+    filename: str
+    document_type: DocumentType
+    status: DocumentStatus
+    course: CourseResponse
+
+
 class ReportResponse(APIModel):
     id: int
     document_id: int
     submitted_by: int
+    submitter_name: str
+    document: ReportDocumentSummary
     reason: str
     status: ReportStatus
     moderator_note: str | None

@@ -23,7 +23,7 @@ def create_report(
     db.add(report)
     commit_or_conflict(db)
     db.refresh(report)
-    return report
+    return report_output(report)
 
 
 @router.get("/reports", response_model=PageResponse[ReportResponse])
@@ -56,4 +56,4 @@ def update_report(
     report.moderator_note = payload.moderator_note
     commit_or_conflict(db)
     db.refresh(report)
-    return report
+    return report_output(report)

@@ -8,7 +8,14 @@ from sqlalchemy.orm import Query, Session
 
 from app.core.config import PUBLIC_API_BASE_URL, PUBLIC_FRONTEND_URL
 from app.models import ActivityLog, Course, Document, PlatformSettings, Quiz, Report, User
-from app.schemas.api import CourseResponse, DocumentResponse, QuizEditorResponse, QuizResponse, ReportResponse
+from app.schemas.api import (
+    CourseResponse,
+    DocumentResponse,
+    QuizEditorResponse,
+    QuizResponse,
+    ReportDocumentSummary,
+    ReportResponse,
+)
 
 
 def paginate(query: Query, page: int, page_size: int) -> dict[str, Any]:
@@ -118,7 +125,24 @@ def quiz_editor_output(quiz: Quiz) -> dict[str, Any]:
 
 
 def report_output(report: Report) -> dict[str, Any]:
-    return ReportResponse.model_validate(report).model_dump()
+    return ReportResponse(
+        id=report.id,
+        document_id=report.document_id,
+        submitted_by=report.submitted_by,
+        submitter_name=report.submitter.name,
+        document=ReportDocumentSummary(
+            id=report.document.id,
+            filename=report.document.filename,
+            document_type=report.document.document_type,
+            status=report.document.status,
+            course=CourseResponse.model_validate(report.document.course),
+        ),
+        reason=report.reason,
+        status=report.status,
+        moderator_note=report.moderator_note,
+        created_at=report.created_at,
+        updated_at=report.updated_at,
+    ).model_dump()
 
 
 def commit_or_conflict(db: Session, message: str = "The change conflicts with existing data.") -> None:

@@ -2031,7 +2031,7 @@ components:
 
     Report:
       type: object
-      required: [id, document_id, submitted_by, reason, status, created_at]
+      required: [id, document_id, submitted_by, submitter_name, document, reason, status, created_at]
       properties:
         id:
           type: integer
@@ -2039,6 +2039,10 @@ components:
           type: integer
         submitted_by:
           type: integer
+        submitter_name:
+          type: string
+        document:
+          $ref: '#/components/schemas/ReportDocument'
         reason:
           type: string
         status:
@@ -2052,6 +2056,21 @@ components:
         updated_at:
           type: string
           format: date-time
+
+    ReportDocument:
+      type: object
+      required: [id, filename, document_type, status, course]
+      properties:
+        id:
+          type: integer
+        filename:
+          type: string
+        document_type:
+          $ref: '#/components/schemas/DocumentType'
+        status:
+          $ref: '#/components/schemas/DocumentStatus'
+        course:
+          $ref: '#/components/schemas/Course'
 
     QuizQuestionInput:
       type: object

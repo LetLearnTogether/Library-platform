@@ -55,7 +55,7 @@ const roleResponsibilities = [
   {
     role: 'Moderator',
     tone: 'moderator',
-    description: 'Review content reports and revoke stamps when verified material must be withdrawn.',
+    description: 'Review submissions across courses, resolve content reports, and revoke or remove material that violates platform standards.',
   },
   {
     role: 'Admin',
