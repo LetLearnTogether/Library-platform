@@ -30,13 +30,8 @@
   display: grid;
   width: 42px;
   height: 42px;
-  place-items: center;
-  border-radius: 13px;
-  background: linear-gradient(145deg, #1d4e89, #17335d);
-  box-shadow: 0 5px 12px rgb(23 59 108 / 17%);
-  color: #ffffff;
-  font-size: 22px;
-  font-weight: 800;
+  flex: 0 0 42px;
+  object-fit: contain;
 }
 
 .portal-brand > span:last-child,
@@ -193,9 +188,8 @@
 .portal-support-mark {
   width: 30px;
   height: 30px;
+  flex-basis: 30px;
   margin-bottom: 12px;
-  border-radius: 9px;
-  font-size: 16px;
 }
 
 .portal-sidebar-bottom strong {
@@ -257,6 +251,7 @@
   .portal-brand-mark {
     width: 36px;
     height: 36px;
+    flex-basis: 36px;
   }
 
   .portal-brand strong {

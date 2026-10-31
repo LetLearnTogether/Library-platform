@@ -7,7 +7,7 @@ from app.core.dependencies import get_current_user
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models import User
 from app.schemas.api import LoginRequest, RegisterRequest, TokenResponse, UserResponse
-from app.services.api import commit_or_conflict
+from app.services.api import commit_or_conflict, require_platform_settings
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 _dummy_password_hash = hash_password("timing-protection-password")
@@ -15,6 +15,9 @@ _dummy_password_hash = hash_password("timing-protection-password")
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def register(payload: RegisterRequest, db: Session = Depends(get_db)):
+    settings = require_platform_settings(db)
+    if not settings.registration_enabled:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Public registration is currently paused.")
     email = str(payload.email).lower()
     if db.query(User).filter(func.lower(User.email) == email).first():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="An account with this email already exists.")

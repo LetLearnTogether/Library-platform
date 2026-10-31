@@ -113,9 +113,21 @@ button:disabled {
 }
 
 .upload-course-empty {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
   border-color: #e2e8f0;
   background: #f8fafc;
   color: #475569;
+}
+
+.upload-course-empty p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.upload-course-empty .secondary-button {
+  min-height: 38px;
 }
 
 .upload-file-summary {
@@ -454,14 +466,8 @@ button:disabled {
 .brand-mark {
   width: 43px;
   height: 43px;
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  color: #ffffff;
-  background: #2156a5;
-  border-radius: 13px;
-  font-size: 24px;
-  font-weight: 800;
+  flex: 0 0 43px;
+  object-fit: contain;
 }
 
 .brand-name {
@@ -1236,8 +1242,7 @@ a:focus-visible {
 .footer-brand .brand-mark {
   width: 31px;
   height: 31px;
-  border-radius: 9px;
-  font-size: 18px;
+  flex-basis: 31px;
 }
 
 .site-footer > p {
@@ -1278,7 +1283,7 @@ a:focus-visible {
   .brand-mark {
     width: 37px;
     height: 37px;
-    font-size: 20px;
+    flex-basis: 37px;
   }
 
   .brand-name {
@@ -1404,5 +1409,47 @@ a:focus-visible {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
+  }
+}
+.platform-notice {
+  position: relative;
+  z-index: 31;
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 8px 18px;
+  background: #eaf2fd;
+  color: #173b6c;
+  font-size: 13px;
+  text-align: center;
+}
+
+.platform-notice p {
+  margin: 0;
+}
+
+.platform-notice a {
+  color: #174f91;
+  font-weight: 750;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.app-status-error {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 28px;
+  color: #9e2d27;
+  text-align: center;
+}
+
+@media (max-width: 600px) {
+  .platform-notice {
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    font-size: 12px;
   }
 }

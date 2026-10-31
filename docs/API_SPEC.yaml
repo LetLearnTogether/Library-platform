@@ -16,16 +16,104 @@ tags:
   - name: Authentication
   - name: Users
   - name: Courses
+  - name: Course announcements
+  - name: Course enrollments
   - name: Documents
   - name: Verification
   - name: Reports
   - name: Quizzes
   - name: Quiz attempts
+  - name: Settings
+  - name: Admin Activity
 
 security:
   - bearerAuth: []
 
 paths:
+  /settings/public:
+    get:
+      tags: [Settings]
+      summary: Read public platform settings
+      description: Returns the announcement, public support contact, registration, and student-upload availability. Does not require authentication.
+      security: []
+      responses:
+        '200':
+          description: Public platform settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicSettings'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /settings:
+    get:
+      tags: [Settings]
+      summary: Read platform settings
+      description: Administrator only.
+      responses:
+        '200':
+          description: Platform settings and last update time
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminSettings'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        default:
+          $ref: '#/components/responses/Error'
+    patch:
+      tags: [Settings]
+      summary: Update platform settings
+      description: Administrator only. Apply one or more settings; enabling an announcement requires a non-empty message.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminSettingsUpdate'
+      responses:
+        '200':
+          description: Settings updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminSettings'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /activity:
+    get:
+      tags: [Admin Activity]
+      summary: List administrative activity
+      description: Administrator only. Returns recent account, course, document-review, and platform-settings changes. Passwords and account credentials are never included.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Paginated activity entries, newest first
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        default:
+          $ref: '#/components/responses/Error'
+
   /auth/register:
     post:
       tags: [Authentication]
@@ -49,6 +137,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '409':
           $ref: '#/components/responses/Conflict'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ValidationError'
         default:
@@ -344,6 +434,219 @@ paths:
         default:
           $ref: '#/components/responses/Error'
 
+  /enrollments/mine:
+    get:
+      tags: [Course enrollments]
+      summary: List the current student's enrolled courses and quiz progress
+      description: Student only. Progress includes attempts for published quizzes.
+      responses:
+        '200':
+          description: Enrolled courses and progress
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StudentCourseEnrollment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /courses/{course_id}/enrollment:
+    parameters:
+      - $ref: '#/components/parameters/CourseId'
+    post:
+      tags: [Course enrollments]
+      summary: Enroll the current student in a course
+      description: Student only. A student can enroll once per course.
+      responses:
+        '201':
+          description: Enrollment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentCourseEnrollment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        default:
+          $ref: '#/components/responses/Error'
+    delete:
+      tags: [Course enrollments]
+      summary: Leave a course
+      description: Student only. Leaving removes the enrollment but preserves historical quiz attempts.
+      responses:
+        '204':
+          description: Enrollment removed, if present
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /courses/{course_id}/students:
+    parameters:
+      - $ref: '#/components/parameters/CourseId'
+    get:
+      tags: [Course enrollments]
+      summary: List enrolled students and quiz progress for a course
+      description: Assigned Lecturer or Admin only. Includes published-quiz progress for the enrolled students on the requested page.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Paginated student roster and progress
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseRoster'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /courses/{course_id}/announcements:
+    parameters:
+      - $ref: '#/components/parameters/CourseId'
+    get:
+      tags: [Course announcements]
+      summary: List public announcements for a course
+      security: []
+      responses:
+        '200':
+          description: Course announcements, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CourseAnnouncement'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        default:
+          $ref: '#/components/responses/Error'
+    post:
+      tags: [Course announcements]
+      summary: Publish an announcement for a course
+      description: Lecturer assigned to the course or Admin.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CourseAnnouncementInput'
+      responses:
+        '201':
+          description: Announcement published
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseAnnouncement'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /courses/{course_id}/announcements/manage:
+    parameters:
+      - $ref: '#/components/parameters/CourseId'
+    get:
+      tags: [Course announcements]
+      summary: List announcements for course management
+      description: Lecturer assigned to the course or Admin.
+      responses:
+        '200':
+          description: Manageable course announcements, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CourseAnnouncement'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /course-announcements/{announcement_id}:
+    parameters:
+      - name: announcement_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+    put:
+      tags: [Course announcements]
+      summary: Update an announcement
+      description: Lecturer assigned to the announcement's course or Admin.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CourseAnnouncementInput'
+      responses:
+        '200':
+          description: Announcement updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseAnnouncement'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        default:
+          $ref: '#/components/responses/Error'
+    delete:
+      tags: [Course announcements]
+      summary: Delete an announcement
+      description: Lecturer assigned to the announcement's course or Admin.
+      responses:
+        '204':
+          description: Announcement deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        default:
+          $ref: '#/components/responses/Error'
+
   /documents:
     get:
       tags: [Documents]
@@ -396,8 +699,8 @@ paths:
           $ref: '#/components/responses/Error'
     post:
       tags: [Documents]
-      summary: Upload a document for review
-      description: Student or higher role. PDF, JPEG, PNG, and WebP files are validated by extension and MIME type. The original filename is retained as the document's display filename. New documents have status Under Review.
+      summary: Upload a document or publish assigned-course material
+      description: Students may submit documents to any existing course when uploads are enabled; these remain Under Review. Lecturers may upload only to courses assigned to them; their course materials are immediately Verified and receive a verification token. Other staff uploads remain Under Review. PDF, JPEG, PNG, and WebP files are validated by extension, MIME type, and file signature. The original filename is retained as the display filename.
       requestBody:
         required: true
         content:
@@ -416,7 +719,7 @@ paths:
                   $ref: '#/components/schemas/DocumentType'
       responses:
         '201':
-          description: Document uploaded and queued for review
+          description: Document uploaded; status depends on uploader role
           content:
             application/json:
               schema:
@@ -506,7 +809,7 @@ paths:
     delete:
       tags: [Documents]
       summary: Remove document content
-      description: Moderator or Admin only. Revokes an existing verification stamp before removing or restricting the content.
+      description: Moderator or Admin may remove any document. A Lecturer may remove only their own uploads for a course currently assigned to them. The document is revoked and its file is removed from public access.
       responses:
         '204':
           description: Document removed
@@ -829,6 +1132,25 @@ paths:
         default:
           $ref: '#/components/responses/Error'
 
+  /lecturer/performance:
+    get:
+      tags: [Quizzes]
+      summary: Read the current Lecturer's course performance overview
+      description: Lecturer only. Summarizes quiz counts, attempt counts, and attempt-weighted average scores for assigned courses, plus up to five lowest-accuracy questions from recorded answer snapshots. Questions without answer snapshots are excluded from difficulty ranking.
+      responses:
+        '200':
+          description: Course-scoped performance overview
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LecturerPerformance'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        default:
+          $ref: '#/components/responses/Error'
+
   /quizzes:
     get:
       tags: [Quizzes]
@@ -982,13 +1304,41 @@ paths:
         default:
           $ref: '#/components/responses/Error'
 
+  /quizzes/{quiz_id}/results:
+    parameters:
+      - $ref: '#/components/parameters/QuizId'
+    get:
+      tags: [Quizzes]
+      summary: Read quiz performance results
+      description: Lecturer assigned to the quiz course or Admin only. Includes paginated student attempts and aggregate question/option performance. Per-question data is available only for attempts submitted after answer snapshots were introduced.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Quiz performance report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizResults'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        default:
+          $ref: '#/components/responses/Error'
+
   /quizzes/{quiz_id}/attempts:
     parameters:
       - $ref: '#/components/parameters/QuizId'
     post:
       tags: [Quiz attempts]
       summary: Submit answers and record an attempt
-      description: Student only. The server calculates the score using stored correct answers; clients cannot submit a score.
+      description: Student only. The student must be enrolled in the quiz's course. The server calculates the score using stored correct answers; clients cannot submit a score.
       requestBody:
         required: true
         content:
@@ -1215,6 +1565,85 @@ components:
           maxLength: 128
           description: Maximum 72 UTF-8 bytes because passwords are hashed with bcrypt.
 
+    PublicSettings:
+      type: object
+      required: [announcement_enabled, announcement_message, support_contact, registration_enabled, uploads_enabled]
+      properties:
+        announcement_enabled:
+          type: boolean
+        announcement_message:
+          type: string
+          nullable: true
+          maxLength: 500
+        support_contact:
+          type: string
+          nullable: true
+          maxLength: 254
+          description: Email address or HTTP(S) support URL.
+        registration_enabled:
+          type: boolean
+        uploads_enabled:
+          type: boolean
+
+    AdminSettings:
+      allOf:
+        - $ref: '#/components/schemas/PublicSettings'
+        - type: object
+          required: [updated_at]
+          properties:
+            updated_at:
+              type: string
+              format: date-time
+
+    AdminSettingsUpdate:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        announcement_enabled:
+          type: boolean
+        announcement_message:
+          type: string
+          nullable: true
+          maxLength: 500
+        support_contact:
+          type: string
+          nullable: true
+          maxLength: 254
+          description: Email address or HTTP(S) support URL.
+        registration_enabled:
+          type: boolean
+        uploads_enabled:
+          type: boolean
+
+    Activity:
+      type: object
+      required: [id, actor_id, actor_name, actor_role, action, entity_type, entity_id, summary, created_at]
+      properties:
+        id:
+          type: integer
+        actor_id:
+          type: integer
+          nullable: true
+          description: Null when the acting account has since been deleted.
+        actor_name:
+          type: string
+          description: Name recorded at the time of the activity.
+        actor_role:
+          $ref: '#/components/schemas/UserRole'
+        action:
+          type: string
+        entity_type:
+          type: string
+        entity_id:
+          type: integer
+          nullable: true
+        summary:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
     UserCreate:
       type: object
       additionalProperties: false
@@ -1346,7 +1775,7 @@ components:
 
     Course:
       type: object
-      required: [id, course_code, course_title, year, semester]
+      required: [id, course_code, course_title, year, semester, lecturer_id, lecturer_name]
       properties:
         id:
           type: integer
@@ -1361,6 +1790,138 @@ components:
         lecturer_id:
           type: integer
           nullable: true
+        lecturer_name:
+          type: string
+          nullable: true
+
+    StudentCourseEnrollment:
+      type: object
+      required: [course, enrolled_at, quiz_count, quizzes_attempted, attempt_count, average_score, last_attempt_at]
+      properties:
+        course:
+          $ref: '#/components/schemas/Course'
+        enrolled_at:
+          type: string
+          format: date-time
+        quiz_count:
+          type: integer
+        quizzes_attempted:
+          type: integer
+        attempt_count:
+          type: integer
+        average_score:
+          type: number
+          nullable: true
+        last_attempt_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    CourseRosterQuizProgress:
+      type: object
+      required: [quiz_id, quiz_title, attempt_count, best_score, latest_score, last_attempt_at]
+      properties:
+        quiz_id:
+          type: integer
+        quiz_title:
+          type: string
+        attempt_count:
+          type: integer
+        best_score:
+          type: number
+          nullable: true
+        latest_score:
+          type: number
+          nullable: true
+        last_attempt_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    CourseRosterStudent:
+      type: object
+      required: [student_id, student_name, enrolled_at, attempt_count, quizzes_attempted, average_score, last_attempt_at, quizzes]
+      properties:
+        student_id:
+          type: integer
+        student_name:
+          type: string
+        enrolled_at:
+          type: string
+          format: date-time
+        attempt_count:
+          type: integer
+        quizzes_attempted:
+          type: integer
+        average_score:
+          type: number
+          nullable: true
+        last_attempt_at:
+          type: string
+          format: date-time
+          nullable: true
+        quizzes:
+          type: array
+          items:
+            $ref: '#/components/schemas/CourseRosterQuizProgress'
+
+    CourseRoster:
+      type: object
+      required: [course, quiz_count, page, page_size, total_items, total_pages, students]
+      properties:
+        course:
+          $ref: '#/components/schemas/Course'
+        quiz_count:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+        total_items:
+          type: integer
+        total_pages:
+          type: integer
+        students:
+          type: array
+          items:
+            $ref: '#/components/schemas/CourseRosterStudent'
+
+    CourseAnnouncementInput:
+      type: object
+      additionalProperties: false
+      required: [title, body]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 160
+        body:
+          type: string
+          minLength: 1
+          maxLength: 5000
+
+    CourseAnnouncement:
+      type: object
+      required: [id, course_id, author_id, author_name, title, body, created_at, updated_at]
+      properties:
+        id:
+          type: integer
+        course_id:
+          type: integer
+        author_id:
+          type: integer
+        author_name:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
 
     Document:
       type: object
@@ -1686,6 +2247,156 @@ components:
             quiz_title:
               type: string
 
+    QuizResults:
+      type: object
+      required: [quiz_id, quiz_title, course, attempt_count, average_score, page, page_size, total_pages, attempts, questions]
+      properties:
+        quiz_id:
+          type: integer
+        quiz_title:
+          type: string
+        course:
+          $ref: '#/components/schemas/Course'
+        attempt_count:
+          type: integer
+        average_score:
+          type: number
+          format: float
+          nullable: true
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+        total_pages:
+          type: integer
+          minimum: 0
+        attempts:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuizResultAttempt'
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuizQuestionPerformance'
+
+    LecturerPerformance:
+      type: object
+      required: [quiz_count, attempt_count, average_score, courses, challenging_questions]
+      properties:
+        quiz_count:
+          type: integer
+          minimum: 0
+        attempt_count:
+          type: integer
+          minimum: 0
+        average_score:
+          type: number
+          format: float
+          nullable: true
+        courses:
+          type: array
+          items:
+            $ref: '#/components/schemas/LecturerCoursePerformance'
+        challenging_questions:
+          type: array
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/LecturerChallengingQuestion'
+
+    LecturerCoursePerformance:
+      type: object
+      required: [course, quiz_count, attempt_count, average_score]
+      properties:
+        course:
+          $ref: '#/components/schemas/Course'
+        quiz_count:
+          type: integer
+        attempt_count:
+          type: integer
+        average_score:
+          type: number
+          format: float
+          nullable: true
+
+    LecturerChallengingQuestion:
+      type: object
+      required: [course_code, quiz_title, question_order, question_text, total_responses, correct_count, correct_percentage]
+      properties:
+        course_code:
+          type: string
+        quiz_title:
+          type: string
+        question_order:
+          type: integer
+        question_text:
+          type: string
+        total_responses:
+          type: integer
+        correct_count:
+          type: integer
+        correct_percentage:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+
+    QuizResultAttempt:
+      type: object
+      required: [id, student_name, score, total_questions, attempted_at]
+      properties:
+        id:
+          type: integer
+        student_name:
+          type: string
+        score:
+          type: number
+          format: float
+        total_questions:
+          type: integer
+        attempted_at:
+          type: string
+          format: date-time
+
+    QuizQuestionPerformance:
+      type: object
+      required: [question_order, question_text, total_responses, correct_count, correct_percentage, options]
+      properties:
+        question_order:
+          type: integer
+          minimum: 1
+        question_text:
+          type: string
+        total_responses:
+          type: integer
+        correct_count:
+          type: integer
+        correct_percentage:
+          type: number
+          format: float
+          nullable: true
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuizAnswerOptionPerformance'
+
+    QuizAnswerOptionPerformance:
+      type: object
+      required: [option_text, selection_count, percentage, is_correct]
+      properties:
+        option_text:
+          type: string
+        selection_count:
+          type: integer
+        percentage:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+        is_correct:
+          type: boolean
+
     UserPage:
       allOf:
         - $ref: '#/components/schemas/PageMetadata'
@@ -1751,6 +2462,17 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/QuizAttempt'
+
+    ActivityPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Activity'
 
     PageMetadata:
       type: object

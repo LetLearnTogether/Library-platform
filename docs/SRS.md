@@ -16,10 +16,10 @@ This SRS details the technical, functional, and non-functional requirements for 
 | Actor | Technical Permissions & System Access |
 | :--- | :--- |
 | **Visitor** | GET public metadata, GET public verification page (`/api/v1/verification/{token}`). |
-| **Student** | POST auth/register, POST document upload requests, GET (read/view) and GET (download) verified documents/quizzes, POST quiz attempts. Cannot DELETE or UPDATE core data. |
-| **Lecturer** | All Student permissions + PUT/PATCH document reviews (approve/reject), POST/PUT quizzes. Restricted to assigned courses. |
+| **Student** | POST auth/register, POST document upload requests, enroll in and leave courses, GET (read/view) and GET (download) verified documents/quizzes, POST quiz attempts when enrolled in the quiz's course. Cannot DELETE or UPDATE core data. |
+| **Lecturer** | Upload and remove own course materials, review student documents (approve/reject), manage quizzes, publish course announcements, and view assigned-course quiz performance and enrolled-student progress. Restricted to assigned courses. Lecturer uploads are verified on publication; Student submissions remain subject to review. |
 | **Moderator** | GET/PUT reports, DELETE content, PUT document status (revoke stamp). |
-| **Admin** | Full CRUD on Users, Roles, Courses, and System Settings. |
+| **Admin** | Full CRUD on Users, Roles, Courses, and System Settings; read administrative activity history. |
 
 ## 3. Functional Requirements (Technical Detail)
 | Req ID | Module | Technical Implementation Detail |
@@ -35,6 +35,10 @@ This SRS details the technical, functional, and non-functional requirements for 
 | FR-QUIZ-01 | Quizzes | Lecturers can create MCQ quizzes (Question, Options, Correct Answer Index). |
 | FR-QUIZ-02 | Quizzes | System shall calculate the score server-side upon submission to prevent client-side cheating. |
 | FR-QUIZ-03 | Quizzes | System shall save attempt history (Score, Date, Quiz ID) linked to the Student user ID. |
+| FR-ENROLL-01 | Course enrollment | Students shall be able to self-enroll in and leave courses; leaving shall preserve their historical quiz attempts. |
+| FR-ENROLL-02 | Quiz access | Students must be enrolled in a course before submitting a quiz attempt for that course. |
+| FR-ENROLL-03 | Progress tracking | Students shall see published-quiz progress for their enrollments; assigned Lecturers and Admins shall see paginated enrolled-student progress. |
+| FR-ADMIN-02 | Audit Log | System shall record and expose to Admins the actor and timestamp for account, course, document-review, and system-setting changes without recording credentials. |
 
 ## 4. Non-Functional Requirements (Technical Metrics)
 | Req ID | Category | Technical Constraint / Metric |
@@ -49,7 +53,7 @@ This SRS details the technical, functional, and non-functional requirements for 
 ## 5. UI/UX & Folder Structure Implementation
 To implement the "virtual folder" structure without creating physical server folders, the system will use relational database filtering and frontend routing:
 
-1. **Frontend Routing:** The UI will use nested routes (e.g., `/courses/CS101/2025/First-Semester/Midterm`).
+1. **Frontend Routing:** The UI will use nested routes through the assigned lecturer (e.g., `/courses/CS101/2025/First-Semester/Midterm/lecturer-3`). Courses without an assignment use an Unassigned lecturer folder.
 2. **Backend Querying:** When a user clicks a "folder", the frontend sends a GET request with query parameters (e.g., `?course_id=1&year=2025&semester=1&type=Midterm`). The backend filters the MySQL database and returns only the relevant documents.
 
 ## 6. Data Requirements (MySQL Schema)
@@ -59,9 +63,12 @@ The Database team must implement the following core entities to support the hier
 | :--- | :--- | :--- |
 | **Users** | id (PK), name, email (Unique), password_hash, role (Enum) | Stores all system actors. |
 | **Courses** | id (PK), course_code (Unique), course_title, year, semester, lecturer_id (FK to Users) | Represents the "Main Folder". Tracks who taught it. |
+| **Course_Announcements** | id (PK), course_id (FK), author_id (FK), title, body, created_at, updated_at | Stores course-specific updates published by assigned Lecturers or Admins and displayed to library visitors. |
+| **Course_Enrollments** | id (PK), course_id (FK), student_id (FK), enrolled_at; unique (course_id, student_id) | Stores student course enrollments; deleting an enrollment does not delete quiz attempts. |
 | **Documents** | id (PK), course_id (FK), document_type (Enum: Midterm, Final, Quiz, etc.), file_path, status (Enum), verification_token (Unique) | The actual papers inside the folder. |
 | **Quizzes** | id (PK), course_id (FK), title, type, is_published (Boolean) | Separate from regular papers for auto-marking. |
 | **Quiz_Attempts** | id (PK), user_id (FK), quiz_id (FK), score, attempted_at | Tracks student quiz history. |
+| **Quiz_Attempt_Answers** | id (PK), attempt_id (FK), question_order, question_text, options, selected_option_index, correct_option_index | Stores submitted answer and question snapshots for course-scoped quiz performance reporting, including after quiz edits. |
 
 ## 7. API Specification & Contract
 The API is the core product. It must follow these rules:

@@ -1,3 +1,29 @@
-from app.models.entities import Course, Document, Quiz, QuizAttempt, QuizQuestion, Report, User
+from app.models.entities import (
+    ActivityLog,
+    Course,
+    CourseAnnouncement,
+    CourseEnrollment,
+    Document,
+    PlatformSettings,
+    Quiz,
+    QuizAttempt,
+    QuizAttemptAnswer,
+    QuizQuestion,
+    Report,
+    User,
+)
 
-__all__ = ["Course", "Document", "Quiz", "QuizAttempt", "QuizQuestion", "Report", "User"]
+__all__ = [
+    "ActivityLog",
+    "Course",
+    "CourseAnnouncement",
+    "CourseEnrollment",
+    "Document",
+    "PlatformSettings",
+    "Quiz",
+    "QuizAttempt",
+    "QuizAttemptAnswer",
+    "QuizQuestion",
+    "Report",
+    "User",
+]

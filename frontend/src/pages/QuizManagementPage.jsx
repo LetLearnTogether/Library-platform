@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
 import { apiRequest } from '../lib/api';
 import './QuizManagementPage.css';
@@ -22,6 +22,8 @@ function createForm() {
 
 export default function QuizManagementPage() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const managedCourseId = searchParams.get('course_id');
   const [courses, setCourses] = useState([]);
   const [quizzes, setQuizzes] = useState([]);
   const [form, setForm] = useState(createForm);
@@ -38,9 +40,11 @@ export default function QuizManagementPage() {
 
   useEffect(() => {
     let active = true;
+    const quizParams = new URLSearchParams({ page: String(page), page_size: String(PAGE_SIZE) });
+    if (managedCourseId) quizParams.set('course_id', managedCourseId);
     Promise.all([
       apiRequest('/courses?page=1&page_size=100'),
-      apiRequest(`/quizzes/manage?page=${page}&page_size=${PAGE_SIZE}`),
+      apiRequest(`/quizzes/manage?${quizParams}`),
     ])
       .then(([coursePage, quizPage]) => {
         if (!active) return;
@@ -59,7 +63,7 @@ export default function QuizManagementPage() {
         if (active) setLoading(false);
       });
     return () => { active = false; };
-  }, [page, reload, user.id, user.role]);
+  }, [managedCourseId, page, reload, user.id, user.role]);
 
   function startNewQuiz() {
     setError('');
@@ -394,6 +398,7 @@ export default function QuizManagementPage() {
                       {quiz.is_published ? 'Published' : 'Draft'}
                     </span>
                     <div className="quiz-management-item-actions">
+                      <Link to={`/quiz-results/${quiz.id}`} className="quiz-management-secondary">View results</Link>
                       <button type="button" className="quiz-management-secondary" onClick={() => editQuiz(quiz.id)} disabled={working}>Edit</button>
                       <button type="button" className="quiz-remove-button" onClick={() => deleteQuiz(quiz)} disabled={working}>Delete</button>
                     </div>

@@ -23,7 +23,7 @@ from app.core.config import (
 )
 from app.core.database import engine
 import app.models
-from app.routers import auth, courses, documents, quizzes, reports, users, verification
+from app.routers import activity, announcements, auth, courses, documents, enrollments, quizzes, reports, settings, users, verification
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("letlearntogether.api")
@@ -135,5 +135,5 @@ def health():
     return {"status": "ok"}
 
 
-for route_group in (auth, users, courses, documents, verification, reports, quizzes):
+for route_group in (auth, users, courses, announcements, documents, enrollments, verification, reports, quizzes, settings, activity):
     app.include_router(route_group.router, prefix="/api/v1")

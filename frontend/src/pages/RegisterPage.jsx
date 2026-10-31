@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
+import { usePlatformSettings } from '../settings/PlatformSettingsContext.js';
 import './RegisterPage.css';
 
 export default function RegisterPage() {
@@ -15,7 +16,23 @@ export default function RegisterPage() {
   const [messageType, setMessageType] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const { register } = useAuth();
+  const { settings } = usePlatformSettings();
   const navigate = useNavigate();
+
+  if (!settings.registration_enabled) {
+    return (
+      <main className="register-page">
+        <section className="register-card">
+          <div className="register-heading">
+            <img className="register-icon" src="/letlearn-together-mark.png" alt="" />
+            <h1>Registration is paused</h1>
+            <p>New student accounts are temporarily unavailable. Please check back later.</p>
+          </div>
+          <p className="register-login-link"><Link to="/login">Log in to your account</Link></p>
+        </section>
+      </main>
+    );
+  }
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -81,9 +98,7 @@ export default function RegisterPage() {
     <main className="register-page">
       <section className="register-card">
         <div className="register-heading">
-          <span className="register-icon" aria-hidden="true">
-            📚
-          </span>
+          <img className="register-icon" src="/letlearn-together-mark.png" alt="" />
           <h1>Create your account</h1>
           <p>Join LetLearnTogether and access learning resources.</p>
         </div>

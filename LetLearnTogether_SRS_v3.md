@@ -36,19 +36,19 @@ This Software Requirements Specification (SRS) details the technical, functional
 | Actor | Technical Permissions and System Access |
 | --- | --- |
 | Visitor | GET public metadata and access the public verification page at /api/v1/verification/{token}. |
-| Student | POST /auth/register; submit document upload requests; GET (read/view) and GET (download) verified documents and quizzes; POST quiz attempts. Cannot DELETE or UPDATE core data. |
-| Lecturer | All Student permissions, plus PUT/PATCH document reviews (approve/reject) and POST/PUT quizzes. Access is restricted to assigned courses. |
+| Student | POST /auth/register; submit document upload requests; self-enroll in and leave courses; GET (read/view) and GET (download) verified documents and quizzes; POST quiz attempts only when enrolled in the quiz's course. Cannot DELETE or UPDATE core data. |
+| Lecturer | Upload and remove own materials, approve/reject student documents, manage quizzes, post course announcements, and view quiz performance and enrolled-student progress for assigned courses. Access is restricted to assigned courses. Lecturer uploads are verified on publication; Student submissions require review. |
 | Moderator | GET/PUT reports, DELETE content, and PUT document status to revoke a stamp. |
-| Admin | Full CRUD access for Users, Roles, Courses, and System Settings. |
+| Admin | Full CRUD access for Users, Roles, Courses, and System Settings; read the administrative activity history. |
 
 # 4. Functional Requirements (Technical Detail)
 
 | Req. ID | Module | Technical Implementation Detail |
 | --- | --- | --- |
-| FR-AUTH-01 | Authentication | The system shall allow registration using an email address and password. Passwords must be hashed using bcrypt. |
+| FR-AUTH-01 | Authentication | The system shall allow registration using an email address and password while public registration is enabled. Passwords must be hashed using bcrypt. |
 | FR-AUTH-02 | Authentication | The system shall issue a JWT (JSON Web Token) upon successful login. |
 | FR-AUTH-03 | Authentication | The system shall enforce Role-Based Access Control (RBAC) on all protected API endpoints. |
-| FR-DOC-01 | Upload Request | The system shall accept PDF/image uploads from Students. The database status column must default to “Under Review.” |
+| FR-DOC-01 | Upload Request | When student uploads are enabled, the system shall accept PDF/image uploads from Students. The database status column must default to “Under Review.” |
 | FR-DOC-02 | Approval Logic | Lecturer/Moderator/Admin endpoints shall allow the status to be changed to “Verified” or “Rejected.” Lecturers may review documents for courses assigned to them; Moderators and Admins may review documents across courses. Changing the status to “Verified” triggers UUID and QR-code generation. |
 | FR-DOC-03 | Read & Download | The system shall provide GET endpoints for students to view files inline or download them. The API shall return only files where status = 'Verified'. Files must be served with appropriate MIME types for browser viewing or download. |
 | FR-VER-01 | Digital Stamp | When a document status changes to “Verified,” the system generates a unique UUID and a QR code linking to /verify/{token}. |
@@ -56,6 +56,11 @@ This Software Requirements Specification (SRS) details the technical, functional
 | FR-QUIZ-01 | Quizzes | Lecturers can create multiple-choice (MCQ) quizzes with a question, options, and correct-answer index. |
 | FR-QUIZ-02 | Quizzes | The system shall calculate scores on the server upon submission to prevent client-side cheating. |
 | FR-QUIZ-03 | Quizzes | The system shall save attempt history (score, date, and quiz ID) linked to the Student user ID. |
+| FR-ENROLL-01 | Course enrollment | Students shall be able to self-enroll in and leave courses; leaving shall preserve historical quiz attempts. |
+| FR-ENROLL-02 | Quiz access | Students must be enrolled in a course before submitting a quiz attempt for that course. |
+| FR-ENROLL-03 | Progress tracking | Students shall see published-quiz progress for their enrollments; assigned Lecturers and Admins shall see paginated enrolled-student progress. |
+| FR-ADMIN-01 | System Settings | Administrators shall manage the public announcement, support contact, public registration, and student-upload availability. Availability controls shall be enforced by the backend. |
+| FR-ADMIN-02 | Activity Log | The system shall record who changed accounts, courses, document review decisions, or platform settings and when. The log shall not include credentials. |
 
 # 5. Non-Functional Requirements (Technical Metrics)
 
@@ -74,7 +79,7 @@ To implement the virtual-folder structure without creating physical server folde
 
 ## 6.1 Frontend Routing
 
-The user interface will use nested routes, for example: /courses/CS101/2025/First-Semester/Midterm.
+The user interface will use nested routes through Lecturer, for example: /courses/CS101/2025/First-Semester/Midterm/lecturer-3. The final segment identifies the course's assigned lecturer; courses without an assignment use an Unassigned lecturer folder.
 
 ## 6.2 Backend Querying
 
@@ -88,9 +93,12 @@ The Database team must implement the following core entities to support the hier
 | --- | --- | --- |
 | Users | id (PK), name, email (Unique), password_hash, role (Enum) | Stores all system actors. |
 | Courses | id (PK), course_code (Unique), course_title, year, semester, lecturer_id (FK to Users) | Represents the main folder and tracks who taught the course. |
+| Course_Announcements | id (PK), course_id (FK), author_id (FK), title, body, created_at, updated_at | Stores course updates posted by assigned Lecturers/Admins and displayed to library visitors. |
+| Course_Enrollments | id (PK), course_id (FK), student_id (FK), enrolled_at; unique (course_id, student_id) | Stores student course enrollments; deleting an enrollment does not delete quiz attempts. |
 | Documents | id (PK), course_id (FK), document_type (Enum: Midterm, Final, Quiz, etc.), file_path, status (Enum), verification_token (Unique) | Stores metadata for the papers inside each course folder. |
 | Quizzes | id (PK), course_id (FK), title, type, is_published (Boolean) | Stores quizzes separately from regular papers to support auto-marking. |
 | Quiz_Attempts | id (PK), user_id (FK), quiz_id (FK), score, attempted_at | Tracks student quiz history. |
+| Quiz_Attempt_Answers | id (PK), attempt_id (FK), question_order, question_text, options, selected_option_index, correct_option_index | Preserves submitted question and answer data for Lecturer/Admin performance reports, including when a quiz is edited. |
 
 # 8. API Specification and Contract
 

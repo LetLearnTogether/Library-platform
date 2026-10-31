@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, JSON, Numeric, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, JSON, Numeric, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -17,6 +17,37 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
+class PlatformSettings(Base):
+    __tablename__ = "Platform_Settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    announcement_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    announcement_message: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    support_contact: Mapped[str | None] = mapped_column(String(254), nullable=True)
+    registration_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    uploads_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    updated_by: Mapped[int | None] = mapped_column(ForeignKey("Users.id"), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+
+class ActivityLog(Base):
+    __tablename__ = "Admin_Activity_Log"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    actor_id: Mapped[int | None] = mapped_column(
+        ForeignKey("Users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    actor_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    actor_role: Mapped[str] = mapped_column(String(20), nullable=False)
+    action: Mapped[str] = mapped_column(String(50), nullable=False)
+    entity_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    entity_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    summary: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
 class Course(Base):
     __tablename__ = "Courses"
 
@@ -27,7 +58,47 @@ class Course(Base):
     semester: Mapped[str] = mapped_column(String(20), nullable=False)
     lecturer_id: Mapped[int | None] = mapped_column(ForeignKey("Users.id"), nullable=True)
 
-    lecturer: Mapped[User | None] = relationship(foreign_keys=[lecturer_id])
+    lecturer: Mapped[User | None] = relationship(foreign_keys=[lecturer_id], lazy="joined")
+
+    @property
+    def lecturer_name(self) -> str | None:
+        return self.lecturer.name if self.lecturer else None
+
+
+class CourseEnrollment(Base):
+    __tablename__ = "Course_Enrollments"
+    __table_args__ = (UniqueConstraint("course_id", "student_id", name="uq_course_enrollment_student"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    course_id: Mapped[int] = mapped_column(
+        ForeignKey("Courses.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    student_id: Mapped[int] = mapped_column(
+        ForeignKey("Users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    enrolled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    course: Mapped[Course] = relationship()
+    student: Mapped[User] = relationship()
+
+
+class CourseAnnouncement(Base):
+    __tablename__ = "Course_Announcements"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    course_id: Mapped[int] = mapped_column(
+        ForeignKey("Courses.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    author_id: Mapped[int] = mapped_column(ForeignKey("Users.id"), nullable=False)
+    title: Mapped[str] = mapped_column(String(160), nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    course: Mapped[Course] = relationship()
+    author: Mapped[User] = relationship()
 
 
 class Document(Base):
@@ -95,6 +166,25 @@ class QuizAttempt(Base):
     attempted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     quiz: Mapped[Quiz] = relationship()
+    answers: Mapped[list["QuizAttemptAnswer"]] = relationship(
+        back_populates="attempt", cascade="all, delete-orphan"
+    )
+
+
+class QuizAttemptAnswer(Base):
+    __tablename__ = "Quiz_Attempt_Answers"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    attempt_id: Mapped[int] = mapped_column(
+        ForeignKey("Quiz_Attempts.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    question_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    question_text: Mapped[str] = mapped_column(Text, nullable=False)
+    options: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    selected_option_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    correct_option_index: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    attempt: Mapped[QuizAttempt] = relationship(back_populates="answers")
 
 
 class Report(Base):

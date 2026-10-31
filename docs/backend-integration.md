@@ -25,18 +25,27 @@ Set the frontend API base URL to `http://localhost:8000/api/v1` for local develo
 
 Frontend clients should:
 
+- Load `GET /settings/public` before rendering registration/upload controls and provide a retry state if settings cannot be fetched. Administrators manage these values through `GET/PATCH /settings`.
+- Administrators can read the paginated, newest-first change history at `GET /activity`; entries include the actor and timestamp and exclude credentials.
+- Treat `registration_enabled` and `uploads_enabled` as display hints; the API rejects public registration and Student uploads when their respective controls are disabled.
+- Display the announcement when `announcement_enabled` is true and render `support_contact` as an email or HTTP(S) link when present.
 - Send the JWT as a bearer token for protected endpoints.
-- Use `multipart/form-data` for `POST /documents`, including `file`, `course_id`, and `document_type`.
-- Expect new uploads to return `Under Review`; these files are not included in public library results until approved.
+- Use the public course `lecturer_name` display field to render the lecturer level of the virtual library; it is `null` when the course is unassigned and does not expose lecturer email or credentials.
+- Use `multipart/form-data` for `POST /documents`, including `file`, `course_id`, and `document_type`. Lecturers can upload only to their assigned courses; their materials are published as `Verified`. Student submissions remain `Under Review` for Lecturer/moderator review.
+- Lecturers can remove only their own materials from their assigned courses with `DELETE /documents/{document_id}`; other document removals remain restricted to Moderators/Admins.
 - Use `GET /documents/{document_id}/content?disposition=inline` to view and `disposition=attachment` to download verified files.
 - Read page metadata from list responses and request pages using `page` and `page_size`.
 - Submit quiz answers by question ID and option index; never send a client-computed score.
 - Quiz editors use `GET /quizzes/manage` to list published and draft quizzes in their authorized courses and `GET /quizzes/{quiz_id}/manage` to load a quiz for editing. Only the editor-specific detail response contains correct-answer indexes; public quiz responses must never expose them.
+- Lecturers assigned to a quiz's course and Administrators can use `GET /quizzes/{quiz_id}/results` for quiz average score, paginated student attempts, and question/option performance. Historical attempts keep their scores; per-question analysis applies to attempts submitted after answer snapshots were introduced.
+- Lecturers can use `GET /lecturer/performance` for attempt-weighted score averages and quiz counts across their assigned courses, plus the five lowest-accuracy questions with recorded responses. The Lecturer dashboard uses this course-scoped overview; quiz reports remain available per quiz.
+- Course announcements are public at `GET /courses/{course_id}/announcements`; assigned Lecturers and Administrators can publish announcements and manage them through the course-scoped announcement endpoints. The library displays the announcements on the selected course page.
+- Students can enroll in and leave courses with `POST/DELETE /courses/{course_id}/enrollment`, and view their enrolled courses and published-quiz progress with `GET /enrollments/mine`. A student must be enrolled before submitting a quiz attempt; leaving keeps the attempt history. Assigned Lecturers and Administrators can use `GET /courses/{course_id}/students` to view paginated enrollment and quiz progress.
 - Display the error `message` and retain `request_id` for support/debugging.
 
 ## Database integration
 
-The application models live in `backend/app/models/entities.py`; the MySQL reference is [schema.sql](./schema.sql). Startup creates missing tables but does not update an existing schema. Before connecting to an existing shared MySQL database:
+The application models live in `backend/app/models/entities.py`; the MySQL reference is [schema.sql](./schema.sql). Startup creates missing tables but does not update an existing schema. Apply the Alembic migration `0005_course_announcements` before enabling course announcements on an existing database. Before connecting to an existing shared MySQL database:
 
 1. Compare model and schema changes with the database team.
 2. Prepare and review a migration.
@@ -44,7 +53,7 @@ The application models live in `backend/app/models/entities.py`; the MySQL refer
 4. Apply the migration in a non-production environment first.
 5. Run the backend tests and verify the feature against MySQL.
 
-Database changes must be compatible with deployed API versions or coordinated with the API change.
+Apply Alembic migration `0006_course_enrollments` to existing databases before enabling enrollment and quiz enrollment checks. Database changes must be compatible with deployed API versions or coordinated with the API change.
 
 ## File storage integration
 

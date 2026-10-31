@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../auth/useAuth';
 import { apiRequest, getDocumentContentUrl, getVerificationUrl } from '../lib/api';
 import './DocumentHistoryPage.css';
 
 const PAGE_SIZE = 20;
 const statuses = ['Under Review', 'Verified', 'Rejected', 'Revoked'];
 
-export default function DocumentHistoryPage() {
+export function DocumentSubmissionsPanel({ embedded = false }) {
+  const { user } = useAuth();
   const [documents, setDocuments] = useState([]);
   const [status, setStatus] = useState('All');
   const [page, setPage] = useState(1);
@@ -15,6 +17,8 @@ export default function DocumentHistoryPage() {
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [workingId, setWorkingId] = useState(null);
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -57,21 +61,31 @@ export default function DocumentHistoryPage() {
     setPage(1);
   }
 
-  return (
-    <main className="document-history-page">
-      <header className="document-history-header">
-        <div>
-          <p className="eyebrow">YOUR CONTRIBUTIONS</p>
-          <h1>Document submissions</h1>
-          <p>Track the review status of the materials you have uploaded.</p>
-        </div>
-        <Link to="/upload" className="document-history-upload-link">Upload a document</Link>
-      </header>
+  async function removeMaterial(document) {
+    if (!window.confirm(`Remove "${document.filename}" from the public library?`)) return;
+    setWorkingId(document.id);
+    setError('');
+    setMessage('');
+    try {
+      await apiRequest(`/documents/${document.id}`, { method: 'DELETE' });
+      setMessage('Material removed from the public library.');
+      setLoading(true);
+      setReload((current) => current + 1);
+    } catch (requestError) {
+      setError(requestError.message || 'The material could not be removed.');
+    } finally {
+      setWorkingId(null);
+    }
+  }
 
-      <section className="document-history-panel" aria-labelledby="document-history-title">
+  return (
+    <section
+      className={`document-history-panel${embedded ? ' document-history-panel-embedded' : ''}`}
+      aria-labelledby="document-history-title"
+    >
         <div className="document-history-panel-heading">
           <div>
-            <h2 id="document-history-title">Your submissions</h2>
+            <h2 id="document-history-title">{embedded ? 'Your uploads' : 'Your submissions'}</h2>
             <p>{totalItems} {totalItems === 1 ? 'document' : 'documents'}</p>
           </div>
           <label className="document-history-status-filter">
@@ -84,6 +98,7 @@ export default function DocumentHistoryPage() {
         </div>
 
         {error && <p className="app-status" role="alert">{error}</p>}
+        {message && <p className="app-status" role="status">{message}</p>}
         {loading ? (
           <p className="app-status" role="status">Loading your submissions…</p>
         ) : error ? (
@@ -112,6 +127,16 @@ export default function DocumentHistoryPage() {
                           <a href={getDocumentContentUrl(document.id)} target="_blank" rel="noreferrer">View document</a>
                           {document.verification_token && (
                             <Link to={getVerificationUrl(document.verification_token)}>Verify stamp</Link>
+                          )}
+                          {user.role === 'Lecturer' && document.uploaded_by === user.id && document.status !== 'Revoked' && (
+                            <button
+                              type="button"
+                              className="document-history-button"
+                              disabled={workingId === document.id}
+                              onClick={() => removeMaterial(document)}
+                            >
+                              {workingId === document.id ? 'Removing…' : 'Remove from library'}
+                            </button>
                           )}
                         </>
                       )}
@@ -147,10 +172,25 @@ export default function DocumentHistoryPage() {
             <span aria-hidden="true">▤</span>
             <h3>{status === 'All' ? 'No submissions yet' : `No ${status.toLowerCase()} submissions`}</h3>
             <p>Your uploaded documents and their review status will appear here.</p>
-            <Link to="/upload" className="document-history-button">Upload your first document</Link>
+            {!embedded && <Link to="/upload" className="document-history-button">Upload your first document</Link>}
           </div>
         )}
-      </section>
+    </section>
+  );
+}
+
+export default function DocumentHistoryPage() {
+  return (
+    <main className="document-history-page">
+      <header className="document-history-header">
+        <div>
+          <p className="eyebrow">YOUR CONTRIBUTIONS</p>
+          <h1>Document submissions</h1>
+          <p>Track the review status of the materials you have uploaded.</p>
+        </div>
+        <Link to="/upload" className="document-history-upload-link">Upload a document</Link>
+      </header>
+      <DocumentSubmissionsPanel />
     </main>
   );
 }

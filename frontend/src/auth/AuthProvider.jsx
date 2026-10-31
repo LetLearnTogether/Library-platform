@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { apiRequest, clearAccessToken, getAccessToken, setAccessToken } from '../lib/api';
+import {
+  apiRequest,
+  AUTH_SESSION_EXPIRED_EVENT,
+  clearAccessToken,
+  getAccessToken,
+  setAccessToken,
+} from '../lib/api';
 import AuthContext from './AuthContext';
 
 export function AuthProvider({ children }) {
@@ -9,6 +15,15 @@ export function AuthProvider({ children }) {
   const logout = useCallback(() => {
     clearAccessToken();
     setUser(null);
+  }, []);
+
+  useEffect(() => {
+    const handleExpiredSession = () => {
+      setUser(null);
+      setLoading(false);
+    };
+    window.addEventListener(AUTH_SESSION_EXPIRED_EVENT, handleExpiredSession);
+    return () => window.removeEventListener(AUTH_SESSION_EXPIRED_EVENT, handleExpiredSession);
   }, []);
 
   useEffect(() => {

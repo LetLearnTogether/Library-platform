@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { apiRequest } from '../lib/api';
+import { apiRequest, getVerificationQrUrl } from '../lib/api';
 import './VerificationPage.css';
 
 function VerificationPage() {
@@ -88,6 +88,15 @@ function VerificationPageContent({ routeToken }) {
               <dt>Approval date</dt>
               <dd>{result.approved_at ? new Date(result.approved_at).toLocaleString() : 'Not available'}</dd>
             </dl>
+            <figure className="verification-qr">
+              <img
+                src={getVerificationQrUrl(routeToken)}
+                alt={`QR code for the ${result.status.toLowerCase()} document verification page`}
+                width="160"
+                height="160"
+              />
+              <figcaption>Scan to check this document&apos;s current status.</figcaption>
+            </figure>
           </section>
         )}
 

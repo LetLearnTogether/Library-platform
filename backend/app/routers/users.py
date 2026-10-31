@@ -7,7 +7,7 @@ from app.core.dependencies import require_roles
 from app.models import User
 from app.core.security import hash_password
 from app.schemas.api import PageResponse, UserCreate, UserResponse, UserRole, UserUpdate
-from app.services.api import commit_or_conflict, paginate
+from app.services.api import commit_or_conflict, flush_or_conflict, paginate, record_activity
 
 router = APIRouter(prefix="/users", tags=["Users"])
 admin_only = require_roles("Admin")
@@ -35,7 +35,7 @@ def list_users(
 def create_user(
     payload: UserCreate,
     db: Session = Depends(get_db),
-    _admin: User = Depends(admin_only),
+    admin: User = Depends(admin_only),
 ):
     email = str(payload.email).lower()
     if db.query(User).filter(func.lower(User.email) == email).first():
@@ -47,6 +47,8 @@ def create_user(
         role=payload.role,
     )
     db.add(user)
+    flush_or_conflict(db, "An account with this email already exists.")
+    record_activity(db, admin, "created", "user", user.id, f"Created account #{user.id} with role {user.role}.")
     commit_or_conflict(db, "An account with this email already exists.")
     db.refresh(user)
     return user
@@ -65,7 +67,7 @@ def update_user(
     user_id: int,
     payload: UserUpdate,
     db: Session = Depends(get_db),
-    _admin: User = Depends(admin_only),
+    admin: User = Depends(admin_only),
 ):
     user = db.get(User, user_id)
     if user is None:
@@ -73,6 +75,13 @@ def update_user(
     changes = payload.model_dump(exclude_unset=True)
     if not changes:
         raise HTTPException(status_code=422, detail="At least one field must be provided.")
+    changed_fields = [field for field, value in changes.items() if getattr(user, field) != value]
+    if changed_fields:
+        if "role" in changed_fields:
+            summary = f"Changed account #{user.id} role from {user.role} to {changes['role']}."
+        else:
+            summary = f"Updated account #{user.id} fields: {', '.join(changed_fields)}."
+        record_activity(db, admin, "updated", "user", user.id, summary)
     if "name" in changes and changes["name"] is not None:
         user.name = changes["name"].strip()
     if "email" in changes and changes["email"] is not None:
@@ -91,6 +100,7 @@ def delete_user(user_id: int, db: Session = Depends(get_db), admin: User = Depen
         raise HTTPException(status_code=404, detail="The requested user does not exist.")
     if user.id == admin.id:
         raise HTTPException(status_code=409, detail="Administrators cannot delete their own active account.")
+    record_activity(db, admin, "deleted", "user", user.id, f"Deleted account #{user.id}.")
     db.delete(user)
     commit_or_conflict(db, "This account is referenced by other records and cannot be deleted.")
     return Response(status_code=status.HTTP_204_NO_CONTENT)

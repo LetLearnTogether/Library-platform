@@ -3,6 +3,9 @@ import { useEffect, useState } from 'react';
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { AuthProvider } from './auth/AuthProvider';
 import { useAuth } from './auth/useAuth';
+import { usePlatformSettings } from './settings/PlatformSettingsContext.js';
+import { PlatformSettingsProvider } from './settings/PlatformSettingsProvider.jsx';
+import PlatformNotice from './settings/PlatformNotice.jsx';
 import Navbar from './components/layout/Navbar.jsx';
 import AuthenticatedLayout from './components/layout/AuthenticatedLayout.jsx';
 import ScrollToHash from './components/layout/ScrollToHash.jsx';
@@ -10,6 +13,7 @@ import RequireAuth from './components/auth/RequireAuth.jsx';
 import { apiRequest, getDocumentContentUrl, getVerificationUrl } from './lib/api.js';
 import DocumentReportDialog from './components/documents/DocumentReportDialog.jsx';
 import LibraryFolderBrowser from './components/documents/LibraryFolderBrowser.jsx';
+import CourseAnnouncements from './components/CourseAnnouncements.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import RegisterPage from './pages/RegisterPage.jsx';
 import StudentDashboard from './pages/StudentDashboard.jsx';
@@ -17,12 +21,19 @@ import QuizPage from './pages/QuizPage.jsx';
 import QuizHistoryPage from './pages/QuizHistoryPage.jsx';
 import DocumentHistoryPage from './pages/DocumentHistoryPage.jsx';
 import QuizManagementPage from './pages/QuizManagementPage.jsx';
+import QuizResultsPage from './pages/QuizResultsPage.jsx';
+import CourseAnnouncementsPage from './pages/CourseAnnouncementsPage.jsx';
 import VerificationPage from './pages/VerificationPage';
 import UploadPage from './pages/UploadPage.jsx';
 import StaffReviewPage from './pages/StaffReviewPage.jsx';
 import AdminDashboard from './pages/AdminDashboard.jsx';
 import AdminAccountsPage from './pages/AdminAccountsPage.jsx';
 import AdminCoursesPage from './pages/AdminCoursesPage.jsx';
+import AdminSettingsPage from './pages/AdminSettingsPage.jsx';
+import AdminActivityPage from './pages/AdminActivityPage.jsx';
+import LecturerDashboard from './pages/LecturerDashboard.jsx';
+import StudentCoursesPage from './pages/StudentCoursesPage.jsx';
+import CourseRosterPage from './pages/CourseRosterPage.jsx';
 import './App.css';
 
 const currentYear = new Date().getFullYear();
@@ -39,7 +50,13 @@ function LibraryPage({ portal = false }) {
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const { courseCode: folderCourseCode, year: folderYear, semester: folderSemester, documentType: folderDocumentType } = useParams();
+  const {
+    courseCode: folderCourseCode,
+    year: folderYear,
+    semester: folderSemester,
+    documentType: folderDocumentType,
+    lecturer: folderLecturer,
+  } = useParams();
   const [search, setSearch] = useState('');
   const [course, setCourse] = useState('All');
   const [year, setYear] = useState('All');
@@ -67,6 +84,9 @@ function LibraryPage({ portal = false }) {
   const selectedDocumentType = isFolderRoute
     ? documentTypes.find((type) => type.toLowerCase() === folderDocumentType?.toLowerCase()) || folderDocumentType || 'All'
     : documentType;
+  const selectedCourseDetails = folderCourseCode
+    ? courseOptions.find((item) => item.course_code.toLowerCase() === folderCourseCode.toLowerCase())
+    : null;
 
   useEffect(() => {
     let active = true;
@@ -85,6 +105,10 @@ function LibraryPage({ portal = false }) {
 
   useEffect(() => {
     let active = true;
+    if (folderDocumentType && !folderLecturer) {
+      return () => { active = false; };
+    }
+
     const timer = window.setTimeout(() => {
       const params = new URLSearchParams({ page: String(page), page_size: '20' });
       if (search.trim()) params.set('q', search.trim());
@@ -115,7 +139,7 @@ function LibraryPage({ portal = false }) {
       active = false;
       window.clearTimeout(timer);
     };
-  }, [search, selectedCourse, selectedYear, selectedSemester, selectedDocumentType, page]);
+  }, [search, selectedCourse, selectedYear, selectedSemester, selectedDocumentType, folderDocumentType, folderLecturer, page]);
 
   const courses = [...new Set(courseOptions.map((item) => item.course_code))].sort();
   const years = [...new Set(courseOptions.map((item) => item.year))].sort((a, b) => b - a);
@@ -206,7 +230,7 @@ function LibraryPage({ portal = false }) {
             </div>
 
             <div className="resource-count">
-              <strong>{totalItems}</strong>
+              <strong>{folderDocumentType && !folderLecturer ? 0 : totalItems}</strong>
               <span>
                 {totalItems === 1
                   ? 'document found'
@@ -223,7 +247,9 @@ function LibraryPage({ portal = false }) {
             year={folderYear}
             semester={folderSemester}
             documentType={folderDocumentType}
+            lecturer={folderLecturer}
           />
+          {folderCourseCode && <CourseAnnouncements course={selectedCourseDetails} />}
 
           <div className="search-panel">
             <label className="search-box">
@@ -317,7 +343,9 @@ function LibraryPage({ portal = false }) {
             </span>
           </div>
 
-          {error ? (
+          {folderDocumentType && !folderLecturer ? (
+            <p className="app-status" role="status">Choose the lecturer folder to view documents.</p>
+          ) : error ? (
             <div className="empty-state" role="alert">
               <h3>Library unavailable</h3>
               <p>{error}</p>
@@ -430,7 +458,7 @@ function LibraryPage({ portal = false }) {
 
       {!portal && <footer className="site-footer">
         <a className="footer-brand" href="/">
-          <span className="brand-mark" aria-hidden="true">L</span>
+          <img className="brand-mark" src="/letlearn-together-mark.png" alt="" />
           LetLearnTogether
         </a>
         <p>
@@ -444,63 +472,93 @@ function LibraryPage({ portal = false }) {
 
 function roleHome(role) {
   if (role === 'Admin') return '/admin';
-  if (['Lecturer', 'Moderator'].includes(role)) return '/staff';
+  if (role === 'Lecturer') return '/lecturer';
+  if (role === 'Moderator') return '/staff';
   return '/student-dashboard';
 }
 
 function AppContent() {
   const { user, loading } = useAuth();
+  const { loading: settingsLoading, error: settingsError, retry } = usePlatformSettings();
 
   if (loading) {
     return <p className="app-status" role="status">Restoring your session…</p>;
   }
 
+  if (settingsLoading) {
+    return <p className="app-status" role="status">Loading platform settings…</p>;
+  }
+
+  if (settingsError) {
+    return (
+      <main className="app-status app-status-error" role="alert">
+        <p>{settingsError}</p>
+        <button type="button" className="secondary-button" onClick={retry}>Retry</button>
+      </main>
+    );
+  }
+
   if (user) {
     return (
-      <AuthenticatedLayout>
-        <ScrollToHash />
-        <Routes>
-          <Route path="/" element={<Navigate to={roleHome(user.role)} replace />} />
-          <Route path="/login" element={<Navigate to={roleHome(user.role)} replace />} />
-          <Route path="/register" element={<Navigate to={roleHome(user.role)} replace />} />
-          <Route path="/library" element={<LibraryPage portal />} />
-          <Route path="/courses/:courseCode/:year/:semester/:documentType" element={<LibraryPage portal />} />
-          <Route path="/courses/:courseCode/:year/:semester" element={<LibraryPage portal />} />
-          <Route path="/courses/:courseCode/:year" element={<LibraryPage portal />} />
-          <Route path="/courses/:courseCode" element={<LibraryPage portal />} />
-          <Route path="/student-dashboard" element={<RequireAuth roles={['Student']}><StudentDashboard /></RequireAuth>} />
-          <Route path="/quiz-history" element={<RequireAuth roles={['Student']}><QuizHistoryPage /></RequireAuth>} />
-          <Route path="/document-history" element={<RequireAuth roles={['Student']}><DocumentHistoryPage /></RequireAuth>} />
-          <Route path="/quiz-management" element={<RequireAuth roles={['Lecturer', 'Admin']}><QuizManagementPage /></RequireAuth>} />
-          <Route path="/upload" element={<RequireAuth><UploadPage /></RequireAuth>} />
-          <Route path="/admin" element={<RequireAuth roles={['Admin']}><AdminDashboard /></RequireAuth>} />
-          <Route path="/admin/accounts" element={<RequireAuth roles={['Admin']}><AdminAccountsPage /></RequireAuth>} />
-          <Route path="/admin/courses" element={<RequireAuth roles={['Admin']}><AdminCoursesPage /></RequireAuth>} />
-          <Route path="/staff" element={<RequireAuth roles={['Lecturer', 'Moderator', 'Admin']}><StaffReviewPage /></RequireAuth>} />
-          <Route path="/quizzes" element={<QuizPage />} />
-          <Route path="/quizzes/:quizId" element={<RequireAuth roles={['Student']}><QuizPage /></RequireAuth>} />
-          <Route path="/verify" element={<VerificationPage />} />
-          <Route path="/verify/:token" element={<VerificationPage />} />
-          <Route path="*" element={<Navigate to={roleHome(user.role)} replace />} />
-        </Routes>
-      </AuthenticatedLayout>
+      <>
+        <PlatformNotice />
+        <AuthenticatedLayout>
+          <ScrollToHash />
+          <Routes>
+            <Route path="/" element={<Navigate to={roleHome(user.role)} replace />} />
+            <Route path="/login" element={<Navigate to={roleHome(user.role)} replace />} />
+            <Route path="/register" element={<Navigate to={roleHome(user.role)} replace />} />
+            <Route path="/library" element={<LibraryPage portal />} />
+            <Route path="/courses/:courseCode/:year/:semester/:documentType" element={<LibraryPage portal />} />
+            <Route path="/courses/:courseCode/:year/:semester/:documentType/:lecturer" element={<LibraryPage portal />} />
+            <Route path="/courses/:courseCode/:year/:semester" element={<LibraryPage portal />} />
+            <Route path="/courses/:courseCode/:year" element={<LibraryPage portal />} />
+            <Route path="/courses/:courseCode" element={<LibraryPage portal />} />
+            <Route path="/student-dashboard" element={<RequireAuth roles={['Student']}><StudentDashboard /></RequireAuth>} />
+            <Route path="/student/courses" element={<RequireAuth roles={['Student']}><StudentCoursesPage /></RequireAuth>} />
+            <Route path="/lecturer/courses/:courseId/students" element={<RequireAuth roles={['Lecturer']}><CourseRosterPage /></RequireAuth>} />
+            <Route path="/quiz-history" element={<RequireAuth roles={['Student']}><QuizHistoryPage /></RequireAuth>} />
+            <Route path="/document-history" element={<RequireAuth roles={['Student']}><DocumentHistoryPage /></RequireAuth>} />
+            <Route path="/quiz-management" element={<RequireAuth roles={['Lecturer', 'Admin']}><QuizManagementPage /></RequireAuth>} />
+            <Route path="/quiz-results/:quizId" element={<RequireAuth roles={['Lecturer', 'Admin']}><QuizResultsPage /></RequireAuth>} />
+            <Route path="/lecturer/announcements" element={<RequireAuth roles={['Lecturer', 'Admin']}><CourseAnnouncementsPage /></RequireAuth>} />
+            <Route path="/upload" element={<RequireAuth><UploadPage /></RequireAuth>} />
+            <Route path="/admin" element={<RequireAuth roles={['Admin']}><AdminDashboard /></RequireAuth>} />
+            <Route path="/admin/accounts" element={<RequireAuth roles={['Admin']}><AdminAccountsPage /></RequireAuth>} />
+            <Route path="/admin/courses" element={<RequireAuth roles={['Admin']}><AdminCoursesPage /></RequireAuth>} />
+            <Route path="/admin/settings" element={<RequireAuth roles={['Admin']}><AdminSettingsPage /></RequireAuth>} />
+            <Route path="/admin/activity" element={<RequireAuth roles={['Admin']}><AdminActivityPage /></RequireAuth>} />
+            <Route path="/lecturer" element={<RequireAuth roles={['Lecturer']}><LecturerDashboard /></RequireAuth>} />
+            <Route path="/staff" element={<RequireAuth roles={['Lecturer', 'Moderator', 'Admin']}><StaffReviewPage /></RequireAuth>} />
+            <Route path="/quizzes" element={<QuizPage />} />
+            <Route path="/quizzes/:quizId" element={<RequireAuth roles={['Student']}><QuizPage /></RequireAuth>} />
+            <Route path="/verify" element={<VerificationPage />} />
+            <Route path="/verify/:token" element={<VerificationPage />} />
+            <Route path="*" element={<Navigate to={roleHome(user.role)} replace />} />
+          </Routes>
+        </AuthenticatedLayout>
+      </>
     );
   }
 
   return (
     <div className="app-shell">
+      <PlatformNotice />
       <Navbar />
       <ScrollToHash />
       <Routes>
         <Route path="/" element={<LibraryPage />} />
         <Route path="/library" element={<LibraryPage />} />
         <Route path="/courses/:courseCode/:year/:semester/:documentType" element={<LibraryPage />} />
+        <Route path="/courses/:courseCode/:year/:semester/:documentType/:lecturer" element={<LibraryPage />} />
         <Route path="/courses/:courseCode/:year/:semester" element={<LibraryPage />} />
         <Route path="/courses/:courseCode/:year" element={<LibraryPage />} />
         <Route path="/courses/:courseCode" element={<LibraryPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/student-dashboard" element={<RequireAuth roles={['Student']}><StudentDashboard /></RequireAuth>} />
+        <Route path="/student/courses" element={<RequireAuth roles={['Student']}><StudentCoursesPage /></RequireAuth>} />
+        <Route path="/lecturer/courses/:courseId/students" element={<RequireAuth roles={['Lecturer']}><CourseRosterPage /></RequireAuth>} />
         <Route path="/quiz-history" element={<RequireAuth roles={['Student']}><QuizHistoryPage /></RequireAuth>} />
         <Route path="/document-history" element={<RequireAuth roles={['Student']}><DocumentHistoryPage /></RequireAuth>} />
         <Route path="/quiz-management" element={<RequireAuth roles={['Lecturer', 'Admin']}><QuizManagementPage /></RequireAuth>} />
@@ -508,6 +566,9 @@ function AppContent() {
         <Route path="/admin" element={<RequireAuth roles={['Admin']}><AdminDashboard /></RequireAuth>} />
         <Route path="/admin/accounts" element={<RequireAuth roles={['Admin']}><AdminAccountsPage /></RequireAuth>} />
         <Route path="/admin/courses" element={<RequireAuth roles={['Admin']}><AdminCoursesPage /></RequireAuth>} />
+        <Route path="/admin/settings" element={<RequireAuth roles={['Admin']}><AdminSettingsPage /></RequireAuth>} />
+        <Route path="/admin/activity" element={<RequireAuth roles={['Admin']}><AdminActivityPage /></RequireAuth>} />
+        <Route path="/lecturer" element={<RequireAuth roles={['Lecturer']}><LecturerDashboard /></RequireAuth>} />
         <Route path="/staff" element={<RequireAuth roles={['Lecturer', 'Moderator', 'Admin']}><StaffReviewPage /></RequireAuth>} />
         <Route path="/quizzes" element={<QuizPage />} />
         <Route path="/quizzes/:quizId" element={<RequireAuth roles={['Student']}><QuizPage /></RequireAuth>} />
@@ -522,7 +583,9 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <PlatformSettingsProvider>
+        <AppContent />
+      </PlatformSettingsProvider>
     </AuthProvider>
   );
 }

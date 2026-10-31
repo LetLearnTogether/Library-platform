@@ -1,5 +1,6 @@
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api/v1').replace(/\/$/, '');
 const TOKEN_KEY = 'llt_access_token';
+export const AUTH_SESSION_EXPIRED_EVENT = 'llt:auth-session-expired';
 
 export class ApiError extends Error {
   constructor(message, status, code, requestId) {
@@ -43,6 +44,10 @@ export async function apiRequest(path, { method = 'GET', body, headers = {}, ...
 
   if (!response.ok) {
     const data = await response.json().catch(() => null);
+    if (response.status === 401 && token) {
+      clearAccessToken();
+      window.dispatchEvent(new Event(AUTH_SESSION_EXPIRED_EVENT));
+    }
     throw new ApiError(
       data?.message || `Request failed with status ${response.status}.`,
       response.status,
@@ -62,4 +67,8 @@ export function getDocumentContentUrl(documentId, disposition = 'inline') {
 
 export function getVerificationUrl(token) {
   return `/verify/${encodeURIComponent(token)}`;
+}
+
+export function getVerificationQrUrl(token) {
+  return `${API_BASE_URL}/verification/${encodeURIComponent(token)}/qr`;
 }

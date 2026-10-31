@@ -22,24 +22,10 @@
 }
 
 .login-logo {
-  display: grid;
-  place-items: center;
-  width: 56px;
-  height: 56px;
-  margin: 0 auto 18px;
-  border-radius: 16px;
-  background: #173b6c;
-  color: #ffffff;
-  font-size: 30px;
-  font-weight: 800;
-}
-
-.login-eyebrow {
-  margin: 0 0 8px;
-  color: #2563eb;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 1.5px;
+  display: block;
+  width: min(100%, 172px);
+  height: auto;
+  margin: 0 auto 14px;
 }
 
 .login-heading h1 {

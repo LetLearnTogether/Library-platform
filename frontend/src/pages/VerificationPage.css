@@ -132,6 +132,31 @@
   margin: 0 0 8px;
 }
 
+.verification-qr {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  margin: 20px 0 0;
+  padding: 16px;
+  border: 1px solid #dbe5f1;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #475569;
+  text-align: center;
+}
+
+.verification-qr img {
+  display: block;
+  width: min(160px, 100%);
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.verification-qr figcaption {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .verification-back-link {
   display: inline-block;
   margin-top: 24px;

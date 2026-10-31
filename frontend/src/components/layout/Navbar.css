@@ -19,15 +19,10 @@
 }
 
 .navbar-logo {
-  display: grid;
-  place-items: center;
   width: 42px;
   height: 42px;
-  border-radius: 12px;
-  background: #173b6c;
-  color: #ffffff;
-  font-size: 24px;
-  font-weight: 800;
+  flex: 0 0 42px;
+  object-fit: contain;
 }
 
 .navbar-brand-text {

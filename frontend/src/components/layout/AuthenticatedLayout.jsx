@@ -18,12 +18,21 @@ function AuthenticatedLayout({ children }) {
       { to: '/admin', label: 'Overview', icon: '▦', end: true },
       { to: '/admin/accounts', label: 'Accounts', icon: '♙' },
       { to: '/admin/courses', label: 'Courses', icon: '▤' },
+      { to: '/admin/settings', label: 'System settings', icon: '⚙' },
+      { to: '/admin/activity', label: 'Activity log', icon: '◷' },
       { to: '/quiz-management', label: 'Quiz management', icon: '✎' },
       { to: '/staff', label: 'Review & reports', icon: '✓' },
       { to: '/library', label: 'Document library', icon: '▤' },
       { to: '/upload', label: 'Upload document', icon: '↑' },
     ]
-    : isStaff
+    : user.role === 'Lecturer'
+      ? [
+        { to: '/lecturer', label: 'Teaching overview', icon: '▦', end: true },
+        { to: '/staff', label: 'Review submissions', icon: '✓' },
+        { to: '/quiz-management', label: 'Course quizzes', icon: '✎' },
+        { to: '/library', label: 'Document library', icon: '▤' },
+      ]
+      : isStaff
       ? [
         { to: '/staff', label: 'Review workspace', icon: '✓', end: true },
         { to: '/quiz-management', label: 'Quiz management', icon: '✎' },
@@ -57,8 +66,8 @@ function AuthenticatedLayout({ children }) {
         >
           <span aria-hidden="true">{sidebarOpen ? '×' : '☰'}</span>
         </button>
-        <NavLink className="portal-brand" to={isAdmin ? '/admin' : isStaff ? '/staff' : '/student-dashboard'}>
-          <span className="portal-brand-mark">L</span>
+        <NavLink className="portal-brand" to={isAdmin ? '/admin' : user.role === 'Lecturer' ? '/lecturer' : isStaff ? '/staff' : '/student-dashboard'}>
+          <img className="portal-brand-mark" src="/letlearn-together-mark.png" alt="" />
           <span><strong>LetLearnTogether</strong><small>Learning portal</small></span>
         </NavLink>
         <InstallAppButton />
@@ -88,7 +97,7 @@ function AuthenticatedLayout({ children }) {
             ))}
           </nav>
           <div className="portal-sidebar-bottom">
-            <div className="portal-support-mark">L</div>
+            <img className="portal-support-mark" src="/letlearn-together-mark.png" alt="" />
             <strong>Learn together</strong>
             <p>Your resources, all in one place.</p>
           </div>

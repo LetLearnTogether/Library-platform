@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Query, Session
 
 from app.core.config import PUBLIC_API_BASE_URL, PUBLIC_FRONTEND_URL
-from app.models import Course, Document, Quiz, Report
+from app.models import ActivityLog, Course, Document, PlatformSettings, Quiz, Report, User
 from app.schemas.api import CourseResponse, DocumentResponse, QuizEditorResponse, QuizResponse, ReportResponse
 
 
@@ -27,6 +27,37 @@ def paginate(query: Query, page: int, page_size: int) -> dict[str, Any]:
 
 def course_output(course: Course) -> dict[str, Any]:
     return CourseResponse.model_validate(course).model_dump()
+
+
+def require_platform_settings(db: Session) -> PlatformSettings:
+    settings = db.get(PlatformSettings, 1)
+    if settings is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Platform settings are not initialized. Apply the database migrations.",
+        )
+    return settings
+
+
+def record_activity(
+    db: Session,
+    actor: User,
+    action: str,
+    entity_type: str,
+    entity_id: int | None,
+    summary: str,
+) -> None:
+    db.add(
+        ActivityLog(
+            actor_id=actor.id,
+            actor_name=actor.name,
+            actor_role=actor.role,
+            action=action,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            summary=summary,
+        )
+    )
 
 
 def document_output(document: Document) -> dict[str, Any]:
@@ -93,6 +124,14 @@ def report_output(report: Report) -> dict[str, Any]:
 def commit_or_conflict(db: Session, message: str = "The change conflicts with existing data.") -> None:
     try:
         db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=message) from exc
+
+
+def flush_or_conflict(db: Session, message: str = "The change conflicts with existing data.") -> None:
+    try:
+        db.flush()
     except IntegrityError as exc:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=message) from exc

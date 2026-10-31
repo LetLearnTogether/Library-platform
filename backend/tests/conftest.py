@@ -7,7 +7,7 @@ from sqlalchemy.pool import StaticPool
 from app.core.database import Base, get_db
 from app.core.security import hash_password
 from app.main import app
-from app.models import Course, User
+from app.models import Course, PlatformSettings, User
 
 
 @pytest.fixture
@@ -43,6 +43,8 @@ def api(tmp_path, monkeypatch):
         moderator = User(name="Moderator", email="moderator@example.com", password_hash=hash_password("password-123"), role="Moderator")
         other_lecturer = User(name="Other Lecturer", email="other-lecturer@example.com", password_hash=hash_password("password-123"), role="Lecturer")
         db.add_all([admin, lecturer, student, moderator, other_lecturer])
+        db.commit()
+        db.add(PlatformSettings(id=1))
         db.commit()
         db.refresh(lecturer)
         db.add(Course(course_code="CS101", course_title="Computer Science", year=2026, semester="First", lecturer_id=lecturer.id))

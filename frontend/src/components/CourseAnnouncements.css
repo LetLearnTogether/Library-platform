@@ -1,0 +1,118 @@
+.course-announcements {
+  margin: 20px 0;
+  padding: clamp(18px, 3vw, 24px);
+  border: 1px solid #dfe8f4;
+  border-radius: 15px;
+  background: linear-gradient(135deg, #f8fbff, #ffffff);
+}
+
+.course-announcements-heading,
+.course-announcement-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.course-announcements-heading {
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.course-announcements-heading .eyebrow {
+  margin: 0 0 5px;
+}
+
+.course-announcements-heading h2 {
+  margin: 0;
+  color: #173b6c;
+  font-size: 19px;
+}
+
+.course-announcements-manage {
+  color: #2459a4;
+  font-size: 12px;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.course-announcements-manage:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.course-announcement-list {
+  display: grid;
+  gap: 10px;
+}
+
+.course-announcement-card {
+  padding: 14px 15px;
+  border: 1px solid #e6edf5;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.course-announcement-card h3 {
+  margin: 0;
+  color: #263b57;
+  font-size: 14px;
+}
+
+.course-announcement-card time,
+.course-announcement-card > span {
+  color: #8492a5;
+  font-size: 11px;
+}
+
+.course-announcement-card > p {
+  margin: 10px 0;
+  color: #4a5e78;
+  font-size: 13px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.course-announcement-feedback {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #718198;
+  font-size: 13px;
+}
+
+.course-announcement-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #fecaca;
+  border-radius: 9px;
+  background: #fff7f7;
+  color: #991b1b;
+}
+
+.course-announcement-error p {
+  margin: 0;
+  font-size: 12px;
+}
+
+.course-announcement-error button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+@media (max-width: 560px) {
+  .course-announcements-heading,
+  .course-announcement-card-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

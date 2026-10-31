@@ -270,7 +270,12 @@ function QuizPageContent({ quizId }) {
         <div><p className="quiz-eyebrow">PRACTICE AND LEARN</p><h1>{quiz.title}</h1><p>{quiz.course.course_code} · {quiz.course.course_title}</p></div>
         <button type="button" className="quiz-back-link" onClick={() => navigate('/quizzes')}>← Quizzes</button>
       </header>
-      {error && <p className="app-status" role="alert">{error}</p>}
+      {error && (
+        <div className="app-status" role="alert">
+          <p>{error}</p>
+          {error.toLowerCase().includes('enroll in this course') && <Link to="/student/courses">Enroll in this course</Link>}
+        </div>
+      )}
       <section className="quiz-card">
         <div className="quiz-top-row">
           <span className="quiz-course-label">{quiz.course.course_code}</span>

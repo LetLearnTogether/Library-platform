@@ -23,15 +23,11 @@
 }
 
 .register-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
   width: 58px;
   height: 58px;
-  margin-bottom: 14px;
-  border-radius: 16px;
-  background: #eaf1ff;
-  font-size: 28px;
+  margin: 0 auto 14px;
+  object-fit: contain;
 }
 
 .register-heading h1 {

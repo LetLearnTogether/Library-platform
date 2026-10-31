@@ -1,0 +1,157 @@
+.admin-settings-page {
+  width: min(940px, 100%);
+  margin: 0 auto;
+  padding: 38px 30px 60px;
+}
+
+.admin-settings-heading {
+  margin-bottom: 25px;
+}
+
+.admin-settings-heading h1 {
+  margin: 5px 0 8px;
+  color: #172f54;
+  font-size: clamp(26px, 4vw, 34px);
+}
+
+.admin-settings-heading > p:last-child,
+.admin-settings-card-heading p {
+  margin: 0;
+  color: #718198;
+  line-height: 1.6;
+}
+
+.admin-settings-form {
+  display: grid;
+  gap: 18px;
+}
+
+.admin-settings-card {
+  display: grid;
+  gap: 19px;
+  padding: 24px;
+  border: 1px solid #e3eaf3;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgb(22 47 84 / 4%);
+}
+
+.admin-settings-card-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.admin-settings-card-heading > span {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  place-items: center;
+  border-radius: 12px;
+  background: #edf4fd;
+  color: #2459a4;
+  font-size: 19px;
+}
+
+.admin-settings-card-heading h2 {
+  margin: 0 0 5px;
+  color: #20334e;
+  font-size: 17px;
+}
+
+.admin-settings-field {
+  display: grid;
+  gap: 8px;
+  color: #334761;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-settings-field input,
+.admin-settings-field textarea {
+  width: 100%;
+  padding: 12px 13px;
+  border: 1px solid #d6e0ec;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #20334e;
+  font: inherit;
+  font-size: 14px;
+}
+
+.admin-settings-field textarea {
+  resize: vertical;
+}
+
+.admin-settings-field input:focus,
+.admin-settings-field textarea:focus {
+  border-color: #4283d2;
+  outline: 3px solid rgb(66 131 210 / 15%);
+}
+
+.admin-settings-field small,
+.settings-toggle small {
+  color: #8492a5;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.settings-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 13px 15px;
+  border: 1px solid #e6edf5;
+  border-radius: 11px;
+  background: #f9fbfe;
+  cursor: pointer;
+}
+
+.settings-toggle input {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  margin: 2px 0 0;
+  accent-color: #2865b0;
+}
+
+.settings-toggle span {
+  display: grid;
+  gap: 4px;
+  color: #293d59;
+  font-size: 14px;
+}
+
+.admin-settings-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.admin-settings-error,
+.admin-settings-success {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 9px;
+  font-size: 14px;
+}
+
+.admin-settings-error {
+  background: #fff1f0;
+  color: #a32d25;
+}
+
+.admin-settings-success {
+  background: #edf8f0;
+  color: #27643a;
+}
+
+@media (max-width: 600px) {
+  .admin-settings-page {
+    padding: 28px 17px 45px;
+  }
+
+  .admin-settings-card {
+    padding: 19px;
+  }
+}

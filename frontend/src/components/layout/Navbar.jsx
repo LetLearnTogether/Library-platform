@@ -21,7 +21,7 @@ function Navbar() {
         onClick={closeMenu}
         aria-label="LetLearnTogether home"
       >
-        <span className="navbar-logo">L</span>
+        <img className="navbar-logo" src="/letlearn-together-mark.png" alt="" />
         <span className="navbar-brand-text">
           <strong>LetLearnTogether</strong>
           <small>Learn. Practice. Succeed.</small>
@@ -87,8 +87,8 @@ function Navbar() {
                 Staff
               </NavLink>
             )}
-            <NavLink to={user.role === 'Student' ? '/student-dashboard' : user.role === 'Admin' ? '/admin' : '/library'} className="navbar-link" onClick={closeMenu}>
-              {user.role === 'Student' || user.role === 'Admin' ? 'Dashboard' : 'Library'}
+            <NavLink to={user.role === 'Student' ? '/student-dashboard' : user.role === 'Admin' ? '/admin' : user.role === 'Lecturer' ? '/lecturer' : '/library'} className="navbar-link" onClick={closeMenu}>
+              {['Student', 'Admin', 'Lecturer'].includes(user.role) ? 'Dashboard' : 'Library'}
             </NavLink>
             <button
               type="button"

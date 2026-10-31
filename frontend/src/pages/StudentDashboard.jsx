@@ -5,6 +5,7 @@ import { apiRequest } from '../lib/api';
 import './StudentDashboard.css';
 
 const quickLinks = [
+  { icon: '🎓', title: 'My Courses', description: 'Enroll in courses and track quiz progress.', link: '/student/courses' },
   { icon: '📚', title: 'Browse Documents', description: 'Find verified study materials and past papers.', link: '/library' },
   { icon: '📝', title: 'Practice Quizzes', description: 'Take quizzes and save your results.', link: '/quizzes' },
   { icon: '📤', title: 'Upload Materials', description: 'Submit resources for lecturer review.', link: '/upload' },

@@ -13,12 +13,17 @@ function semesterLabel(slug) {
   return null;
 }
 
-function folderLink(courseCode, year, semester, documentType) {
+function lecturerFolderSegment(course) {
+  return course.lecturer_id == null ? 'unassigned' : `lecturer-${course.lecturer_id}`;
+}
+
+function folderLink(courseCode, year, semester, documentType, lecturer) {
   const coursePath = `/courses/${encodeURIComponent(courseCode)}`;
   if (year === undefined) return coursePath;
   if (semester === undefined) return `${coursePath}/${year}`;
   if (documentType === undefined) return `${coursePath}/${year}/${semesterSlug(semester)}`;
-  return `${coursePath}/${year}/${semesterSlug(semester)}/${encodeURIComponent(documentType)}`;
+  const documentTypePath = `${coursePath}/${year}/${semesterSlug(semester)}/${encodeURIComponent(documentType)}`;
+  return lecturer === undefined ? documentTypePath : `${documentTypePath}/${lecturer}`;
 }
 
 function FolderCard({ to, icon, title, description }) {
@@ -42,6 +47,7 @@ export default function LibraryFolderBrowser({
   year,
   semester: semesterPath,
   documentType,
+  lecturer,
 }) {
   const selectedCourse = courses.find((course) => course.course_code === courseCode);
   const selectedSemester = semesterPath ? semesterLabel(semesterPath) : null;
@@ -50,6 +56,10 @@ export default function LibraryFolderBrowser({
     || (year !== undefined && String(selectedCourse?.year) !== year)
     || (semesterPath !== undefined && selectedCourse?.semester !== selectedSemester)
     || (documentType !== undefined && !documentTypes.includes(documentType))
+    || (lecturer !== undefined && (
+      documentType === undefined
+      || lecturer.toLowerCase() !== lecturerFolderSegment(selectedCourse).toLowerCase()
+    ))
   );
 
   if (courseCode && !selectedCourse && loading) {
@@ -92,7 +102,19 @@ export default function LibraryFolderBrowser({
   const semesterPathLink = selectedCourse
     ? folderLink(selectedCourse.course_code, selectedCourse.year, selectedCourse.semester)
     : '';
-  const currentLabel = documentType
+  const lecturerPath = selectedCourse && documentType
+    ? folderLink(
+      selectedCourse.course_code,
+      selectedCourse.year,
+      selectedCourse.semester,
+      documentType,
+      lecturerFolderSegment(selectedCourse),
+    )
+    : '';
+  const lecturerLabel = selectedCourse?.lecturer_name || 'Unassigned lecturer';
+  const currentLabel = lecturer !== undefined
+    ? lecturerLabel
+    : documentType
     || (semesterPath ? `${selectedCourse.semester} semester` : '')
     || (year ? `${selectedCourse.year} academic year` : '')
     || selectedCourse?.course_code
@@ -139,6 +161,15 @@ export default function LibraryFolderBrowser({
         description="Verified study documents"
       />
     ));
+  } else if (lecturer === undefined) {
+    folders = (
+      <FolderCard
+        to={lecturerPath}
+        icon="♙"
+        title={lecturerLabel}
+        description="Lecturer"
+      />
+    );
   } else {
     folders = null;
   }
@@ -182,7 +213,15 @@ export default function LibraryFolderBrowser({
         {documentType !== undefined && (
           <>
             <span aria-hidden="true">›</span>
-            <span aria-current="page">{documentType}</span>
+            {lecturer === undefined
+              ? <span aria-current="page">{documentType}</span>
+              : <Link to={folderLink(selectedCourse.course_code, selectedCourse.year, selectedCourse.semester, documentType)}>{documentType}</Link>}
+          </>
+        )}
+        {lecturer !== undefined && (
+          <>
+            <span aria-hidden="true">›</span>
+            <span aria-current="page">{lecturerLabel}</span>
           </>
         )}
       </nav>

@@ -56,8 +56,7 @@ function LoginPage() {
     <main className="login-page">
       <section className="login-card">
         <div className="login-heading">
-          <span className="login-logo" aria-hidden="true">L</span>
-          <p className="login-eyebrow">LETLEARNTOGETHER</p>
+          <img className="login-logo" src="/letlearn-together-logo.png" alt="LetLearnTogether — Learn, Share, Grow" />
           <h1>Welcome back</h1>
           <p className="login-subtitle">
             Sign in to continue your learning journey.

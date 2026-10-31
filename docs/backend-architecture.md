@@ -54,10 +54,10 @@ The API is mounted at `/api/v1`. The interactive API documentation is served by 
 ## Authorization principles
 
 - Public registration creates Student accounts only. Elevated accounts must be created by an Admin or through the initial-admin bootstrap process.
-- Lecturers may review documents and manage quizzes only for courses assigned to them.
+- Lecturers may upload and remove their own course materials, review student documents, post announcements, and manage quizzes only for courses assigned to them. Lecturer-uploaded materials are immediately verified; Student submissions require review.
 - Moderators can review documents, revoke stamps, delete content, and manage reports.
 - Admins manage users and courses and have the administrative permissions specified by the API contract.
-- Students can upload documents, view their own submission status, submit quiz attempts, and view their own attempt history.
+- Students can submit documents for review, view their own submission status, submit quiz attempts, and view their own attempt history.
 - Public document browsing and file delivery expose verified documents only. A verification token continues to show a revoked stamp as Revoked.
 
 ## Persistence and migrations

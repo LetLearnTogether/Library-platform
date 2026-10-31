@@ -172,8 +172,10 @@ export default function StaffReviewPage() {
     <main className="staff-page">
       <header className="staff-heading">
         <p className="eyebrow">STAFF WORKSPACE · {user.role}</p>
-        <h1>Review and moderation</h1>
-        <p>Review pending submissions. Lecturer queues contain only assigned courses.</p>
+        <h1>{user.role === 'Lecturer' ? 'Course submission review' : 'Review and moderation'}</h1>
+        <p>{user.role === 'Lecturer'
+          ? 'Review student submissions for courses assigned to you.'
+          : 'Review pending submissions and protect the trusted learning library.'}</p>
       </header>
       {error && <p className="app-status" role="alert">{error}</p>}
       {message && <p className="app-status" role="status">{message}</p>}

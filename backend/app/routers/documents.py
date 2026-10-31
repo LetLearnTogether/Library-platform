@@ -18,6 +18,8 @@ from app.services.api import (
     require_course,
     require_course_lecturer,
     require_document,
+    require_platform_settings,
+    record_activity,
 )
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
@@ -121,7 +123,12 @@ async def upload_document(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    require_course(db, course_id)
+    if user.role == "Student" and not require_platform_settings(db).uploads_enabled:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Student document uploads are currently paused.")
+    course = require_course(db, course_id)
+    lecturer_upload = user.role == "Lecturer"
+    if lecturer_upload:
+        require_course_lecturer(course, user.id)
     raw_name = (file.filename or "document").replace("\\", "/").rsplit("/", 1)[-1]
     raw_name = "".join(character for character in raw_name if character.isprintable()).strip() or "document"
     extension = Path(raw_name).suffix.lower()
@@ -146,11 +153,26 @@ async def upload_document(
         file_path=str(destination),
         filename=raw_name[:255],
         content_type=expected_type,
-        status="Under Review",
+        status="Verified" if lecturer_upload else "Under Review",
         uploaded_by=user.id,
+        approved_by=user.id if lecturer_upload else None,
+        approved_at=func.now() if lecturer_upload else None,
+        reviewed_by=user.id if lecturer_upload else None,
+        reviewed_at=func.now() if lecturer_upload else None,
+        verification_token=str(uuid.uuid4()) if lecturer_upload else None,
     )
     db.add(document)
     try:
+        db.flush()
+        if lecturer_upload:
+            record_activity(
+                db,
+                user,
+                "published",
+                "document",
+                document.id,
+                f"Published course material for {course.course_code}.",
+            )
         commit_or_conflict(db, "The document could not be saved.")
     except Exception:
         destination.unlink(missing_ok=True)
@@ -228,6 +250,14 @@ def review_document(
         document.verification_token = str(uuid.uuid4())
     else:
         document.status = "Rejected"
+    record_activity(
+        db,
+        reviewer,
+        payload.action,
+        "document",
+        document.id,
+        f"{'Approved' if payload.action == 'approve' else 'Rejected'} document #{document.id} for {document.course.course_code}.",
+    )
     commit_or_conflict(db)
     db.refresh(document)
     return document_output(document)
@@ -245,6 +275,14 @@ def revoke_document(
     document.status = "Revoked"
     document.reviewed_by = moderator.id
     document.reviewed_at = func.now()
+    record_activity(
+        db,
+        moderator,
+        "revoked",
+        "document",
+        document.id,
+        f"Revoked document #{document.id} for {document.course.course_code}.",
+    )
     commit_or_conflict(db)
     db.refresh(document)
     return document_output(document)
@@ -254,12 +292,24 @@ def revoke_document(
 def delete_document(
     document_id: int,
     db: Session = Depends(get_db),
-    moderator: User = Depends(moderator_roles),
+    moderator: User = Depends(reviewer_roles),
 ):
     document = require_document(db, document_id)
+    if moderator.role == "Lecturer":
+        require_course_lecturer(document.course, moderator.id)
+        if document.uploaded_by != moderator.id:
+            raise HTTPException(status_code=403, detail="Lecturers can remove only materials they uploaded.")
     document.status = "Revoked"
     document.reviewed_by = moderator.id
     document.reviewed_at = func.now()
+    record_activity(
+        db,
+        moderator,
+        "deleted",
+        "document",
+        document.id,
+        f"Deleted document file for document #{document.id}.",
+    )
     commit_or_conflict(db)
     file_path = Path(document.file_path).resolve()
     if file_path.is_relative_to(UPLOAD_DIR.resolve()) and file_path.is_file():

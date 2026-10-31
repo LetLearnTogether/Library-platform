@@ -47,6 +47,60 @@
   box-shadow: 0 8px 28px rgb(23 59 108 / 5%);
 }
 
+.document-history-panel-embedded {
+  margin-top: 24px;
+  padding: 24px 0 0;
+  border: 0;
+  border-top: 1px solid #e2e8f0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.upload-workspace {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 8px 0 36px;
+  color: #1e293b;
+}
+
+.upload-workspace-header {
+  margin-bottom: 18px;
+}
+
+.upload-workspace-header h1 {
+  margin: 0;
+  color: #173b6c;
+  font-size: clamp(25px, 4vw, 34px);
+}
+
+.upload-workspace-card {
+  padding: clamp(18px, 3vw, 28px);
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 8px 28px rgb(23 59 108 / 5%);
+}
+
+.upload-workspace-form {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.upload-workspace-form h2 {
+  margin: 0 0 10px;
+  color: #173b6c;
+  font-size: 21px;
+}
+
+.upload-workspace-form > p:not(.eyebrow) {
+  color: #64748b;
+  line-height: 1.6;
+}
+
 .document-history-panel-heading {
   display: flex;
   align-items: flex-start;
@@ -232,6 +286,10 @@
 @media (max-width: 600px) {
   .document-history-page {
     padding: 24px 16px 36px;
+  }
+
+  .upload-workspace {
+    padding: 0 0 36px;
   }
 
   .document-history-header {
