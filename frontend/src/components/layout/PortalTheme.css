@@ -1,0 +1,176 @@
+.portal-shell[data-theme="dark"] {
+  color-scheme: dark;
+  background: #0f1724;
+}
+
+.portal-shell[data-theme="dark"] .portal-header,
+.portal-shell[data-theme="dark"] .portal-sidebar,
+.portal-shell[data-theme="dark"] .portal-mobile-nav {
+  border-color: #2b394c;
+  background: #151f2e;
+}
+
+.portal-shell[data-theme="dark"] .portal-brand,
+.portal-shell[data-theme="dark"] .portal-account-copy strong {
+  color: #e2e8f0;
+}
+
+.portal-shell[data-theme="dark"] .portal-brand small,
+.portal-shell[data-theme="dark"] .portal-account-copy small,
+.portal-shell[data-theme="dark"] .portal-sidebar-label {
+  color: #94a3b8;
+}
+
+.portal-shell[data-theme="dark"] .portal-avatar,
+.portal-shell[data-theme="dark"] .portal-nav-icon {
+  border-color: #34445a;
+  background: #243248;
+  color: #bfdbfe;
+}
+
+.portal-shell[data-theme="dark"] .portal-signout,
+.portal-shell[data-theme="dark"] .portal-theme-toggle,
+.portal-shell[data-theme="dark"] .portal-menu-toggle {
+  border-color: #3a4a60;
+  background: #1c293b;
+  color: #dbe5f1;
+}
+
+.portal-shell[data-theme="dark"] .portal-signout:hover,
+.portal-shell[data-theme="dark"] .portal-theme-toggle:hover,
+.portal-shell[data-theme="dark"] .portal-menu-toggle:hover {
+  border-color: #587294;
+  background: #26364c;
+  color: #ffffff;
+}
+
+.portal-shell[data-theme="dark"] .portal-theme-icon {
+  background: #33445b;
+  color: #fde68a;
+}
+
+.portal-shell[data-theme="dark"] .portal-nav-link {
+  color: #b0bdce;
+}
+
+.portal-shell[data-theme="dark"] .portal-nav-link:hover,
+.portal-shell[data-theme="dark"] .portal-nav-link-active,
+.portal-shell[data-theme="dark"] .portal-mobile-nav-link-active {
+  border-color: #344b69;
+  background: #22344d;
+  color: #bfdbfe;
+}
+
+.portal-shell[data-theme="dark"] .portal-nav-link-active .portal-nav-icon {
+  background: #2f4d73;
+  color: #dbeafe;
+}
+
+.portal-shell[data-theme="dark"] .portal-nav-arrow {
+  color: #8293a9;
+}
+
+.portal-shell[data-theme="dark"] .portal-sidebar-bottom {
+  border-color: #34445a;
+  background: linear-gradient(145deg, #1d2b3d, #172334);
+}
+
+.portal-shell[data-theme="dark"] .portal-sidebar-bottom strong {
+  color: #d5e0ed;
+}
+
+.portal-shell[data-theme="dark"] .portal-sidebar-bottom p {
+  color: #9cacc0;
+}
+
+.portal-shell[data-theme="dark"] .portal-main {
+  color: #d5deea;
+  background: #0f1724;
+}
+
+.portal-shell[data-theme="dark"] .portal-main :is(h1, h2, h3, h4, legend) {
+  color: #e2e8f0;
+}
+
+.portal-shell[data-theme="dark"] .portal-main :is(
+  p:not([class*="status"]):not([class*="error"]):not([class*="success"]),
+  label,
+  li,
+  dt,
+  dd,
+  figcaption
+) {
+  color: #b7c3d2;
+}
+
+.portal-shell[data-theme="dark"] .portal-main :is(a:not(.primary-button):not(.secondary-button)) {
+  color: #93c5fd;
+}
+
+.portal-shell[data-theme="dark"] .portal-main :is(
+  section,
+  article,
+  form,
+  [class*="card"],
+  [class*="panel"],
+  [class*="summary"],
+  [class*="stat"],
+  [class*="list"],
+  [class*="table"]
+):not([class*="status"]):not([class*="error"]):not([class*="success"]):not([class*="badge"]) {
+  border-color: #334155 !important;
+  background-color: #182435 !important;
+  color: #d5deea;
+}
+
+.portal-shell[data-theme="dark"] .portal-main :is(input, select, textarea) {
+  border-color: #475569 !important;
+  background-color: #111c2a !important;
+  color: #e2e8f0 !important;
+  color-scheme: dark;
+}
+
+.portal-shell[data-theme="dark"] .portal-main :is(input, select, textarea)::placeholder {
+  color: #8292a8;
+}
+
+.portal-shell[data-theme="dark"] .portal-main button:not(.primary-button):not(.staff-revoke-button):not([class*="danger"]) {
+  border-color: #475569;
+  background-color: #202e41;
+  color: #dbe5f1;
+}
+
+.portal-shell[data-theme="dark"] .portal-main button:not(:disabled):not(.primary-button):not(.staff-revoke-button):not([class*="danger"]):hover {
+  border-color: #6684aa;
+  background-color: #2a3c54;
+  color: #ffffff;
+}
+
+.portal-shell[data-theme="dark"] .portal-main :is(th, td) {
+  border-color: #334155;
+  color: #cbd5e1;
+}
+
+.portal-shell[data-theme="dark"] .portal-main :is(tr, hr) {
+  border-color: #334155;
+}
+
+.portal-shell[data-theme="dark"] .portal-main :is(.eyebrow, [class*="kicker"]) {
+  color: #93c5fd;
+}
+
+.portal-shell[data-theme="dark"] .portal-main :is([class*="status"], [class*="error"], [class*="success"], [class*="badge"]) {
+  border-color: #46566b;
+}
+
+.portal-shell[data-theme="dark"] .portal-mobile-nav-link {
+  color: #aebbd0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portal-shell,
+  .portal-shell * {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
