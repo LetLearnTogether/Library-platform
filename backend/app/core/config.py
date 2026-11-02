@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import logging
 import os
 import secrets
@@ -45,3 +46,31 @@ CORS_ORIGINS = [
     for origin in os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",")
     if origin.strip()
 ]
+=======
+from pydantic_settings import BaseSettings
+
+class Settings(BaseSettings):
+    # Database Configuration
+    DB_HOST: str = "localhost"
+    DB_USER: str = "root"
+    DB_PASSWORD: str = ""  # Default empty for XAMPP/WAMP. Change if you set a password.
+    DB_NAME: str = "letlearn_db"
+    
+    # Security & Auth
+    SECRET_KEY: str = "your-super-secret-key-change-in-production"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    
+    # App Settings
+    UPLOAD_DIR: str = "./uploads"
+    MAX_UPLOAD_SIZE_MB: int = 10
+
+    @property
+    def DATABASE_URL(self) -> str:
+        return f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}/{self.DB_NAME}"
+
+    class Config:
+        env_file = ".env"  # Automatically reads from .env file if it exists
+
+settings = Settings()
+>>>>>>> 9528878 (feat: complete backend API with secure env config, MySQL integration, and full documentation)

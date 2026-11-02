@@ -1,30 +1,37 @@
-# Environment variables
+# Environment variables - NEVER commit real secrets
 .env
+<<<<<<< HEAD
 .env.production
 backend/.env
 frontend/.env
+=======
+>>>>>>> 9528878 (feat: complete backend API with secure env config, MySQL integration, and full documentation)
 
-# Python
+# Python cache files
 __pycache__/
 *.py[cod]
-venv/
-.venv/
-*.egg-info/
-dist/
-build/
+*$py.class
 
+# Virtual environment
+.venv/
+venv/
+
+<<<<<<< HEAD
 # Node / React
 node_modules/
 frontend/dist/
 frontend/build/
 backups/
+=======
+# Uploaded files (contains user data/QR codes)
+uploads/
+>>>>>>> 9528878 (feat: complete backend API with secure env config, MySQL integration, and full documentation)
 
-# IDE
+# IDE and OS files
 .vscode/
 .idea/
-*.swp
-*.swo
-
-# OS
 .DS_Store
 Thumbs.db
+
+# Logs
+*.log

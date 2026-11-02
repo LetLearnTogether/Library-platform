@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 from collections import defaultdict
 from decimal import Decimal
 from math import ceil
@@ -518,3 +519,14 @@ def list_my_attempts(
         for attempt in result["items"]
     ]
     return result
+=======
+from fastapi import APIRouter
+
+router = APIRouter(prefix="/quizzes", tags=["Quizzes"])
+
+@router.get("/")
+def list_quizzes():
+    """List all available quizzes."""
+    # TODO: Add database query to fetch quizzes
+    return []
+>>>>>>> 9528878 (feat: complete backend API with secure env config, MySQL integration, and full documentation)
