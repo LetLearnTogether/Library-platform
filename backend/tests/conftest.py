@@ -13,6 +13,7 @@ from app.models import Course, PlatformSettings, User
 @pytest.fixture
 def api(tmp_path, monkeypatch):
     import app.main as main_module
+    import app.routers.courses as courses_module
     import app.routers.documents as documents_module
 
     test_engine = create_engine(
@@ -34,6 +35,7 @@ def api(tmp_path, monkeypatch):
     monkeypatch.setattr(main_module, "engine", test_engine)
     upload_dir = tmp_path / "uploads"
     monkeypatch.setattr(main_module, "UPLOAD_DIR", upload_dir)
+    monkeypatch.setattr(courses_module, "UPLOAD_DIR", upload_dir)
     monkeypatch.setattr(documents_module, "UPLOAD_DIR", upload_dir)
 
     with test_session() as db:

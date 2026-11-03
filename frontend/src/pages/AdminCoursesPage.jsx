@@ -85,7 +85,7 @@ export default function AdminCoursesPage() {
   }
 
   async function deleteCourse(course) {
-    if (!window.confirm(`Delete ${course.course_code} — ${course.course_title}? This cannot be undone.`)) return;
+    if (!window.confirm(`Permanently delete ${course.course_code} — ${course.course_title}, including its documents, uploaded files, reports, enrollments, announcements, quizzes, and quiz history? This cannot be undone.`)) return;
     setWorking(true);
     setError('');
     setMessage('');
