@@ -1,15 +1,31 @@
+import logging
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.core.config import UPLOAD_DIR
 from app.core.database import get_db
 from app.core.dependencies import require_roles
-from app.models import Course, User
+from app.models import (
+    Course,
+    CourseAnnouncement,
+    CourseEnrollment,
+    Document,
+    Quiz,
+    QuizAttempt,
+    QuizAttemptAnswer,
+    QuizQuestion,
+    Report,
+    User,
+)
 from app.schemas.api import CourseCreate, CourseResponse, CourseUpdate, PageResponse, Semester
 from app.services.api import commit_or_conflict, flush_or_conflict, paginate, record_activity
 
 router = APIRouter(prefix="/courses", tags=["Courses"])
 admin_only = require_roles("Admin")
+logger = logging.getLogger(__name__)
 
 
 def validate_lecturer(db: Session, lecturer_id: int | None):
@@ -108,6 +124,22 @@ def delete_course(course_id: int, db: Session = Depends(get_db), admin: User = D
     course = db.get(Course, course_id)
     if course is None:
         raise HTTPException(status_code=404, detail="The requested course does not exist.")
+    document_paths = [
+        document.file_path
+        for document in db.query(Document).filter(Document.course_id == course_id).all()
+    ]
+    quiz_ids = [
+        quiz_id
+        for (quiz_id,) in db.query(Quiz.id).filter(Quiz.course_id == course_id).all()
+    ]
+    attempt_ids = [
+        attempt_id
+        for (attempt_id,) in db.query(QuizAttempt.id).filter(QuizAttempt.quiz_id.in_(quiz_ids)).all()
+    ] if quiz_ids else []
+    document_ids = [
+        document_id
+        for (document_id,) in db.query(Document.id).filter(Document.course_id == course_id).all()
+    ]
     record_activity(
         db,
         admin,
@@ -116,6 +148,31 @@ def delete_course(course_id: int, db: Session = Depends(get_db), admin: User = D
         course.id,
         f"Deleted course {course.course_code} (#{course.id}).",
     )
+    if attempt_ids:
+        db.query(QuizAttemptAnswer).filter(QuizAttemptAnswer.attempt_id.in_(attempt_ids)).delete(
+            synchronize_session=False
+        )
+    if quiz_ids:
+        db.query(QuizQuestion).filter(QuizQuestion.quiz_id.in_(quiz_ids)).delete(synchronize_session=False)
+        db.query(QuizAttempt).filter(QuizAttempt.quiz_id.in_(quiz_ids)).delete(synchronize_session=False)
+        db.query(Quiz).filter(Quiz.id.in_(quiz_ids)).delete(synchronize_session=False)
+    if document_ids:
+        db.query(Report).filter(Report.document_id.in_(document_ids)).delete(synchronize_session=False)
+        db.query(Document).filter(Document.id.in_(document_ids)).delete(synchronize_session=False)
+    db.query(CourseAnnouncement).filter(CourseAnnouncement.course_id == course_id).delete(
+        synchronize_session=False
+    )
+    db.query(CourseEnrollment).filter(CourseEnrollment.course_id == course_id).delete(
+        synchronize_session=False
+    )
     db.delete(course)
-    commit_or_conflict(db, "This course contains linked content and cannot be deleted.")
+    commit_or_conflict(db)
+    upload_root = UPLOAD_DIR.resolve()
+    for raw_path in document_paths:
+        file_path = Path(raw_path).resolve()
+        if file_path.is_relative_to(upload_root):
+            try:
+                file_path.unlink(missing_ok=True)
+            except OSError:
+                logger.warning("Could not remove uploaded file after deleting course %s: %s", course_id, file_path)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -66,8 +66,10 @@ function Navbar() {
         </NavLink>
 
         <NavLink
-          to="/#about"
-          className="navbar-link"
+          to="/about"
+          className={({ isActive }) =>
+            `navbar-link ${isActive ? 'navbar-link-active' : ''}`
+          }
           onClick={closeMenu}
         >
           About

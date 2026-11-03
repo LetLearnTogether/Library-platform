@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import io
 
 import qrcode
@@ -40,14 +39,3 @@ def verification_qr(token: str, db: Session = Depends(get_db)):
     image.save(buffer, format="PNG")
     buffer.seek(0)
     return StreamingResponse(buffer, media_type="image/png", headers={"Cache-Control": "public, max-age=3600"})
-=======
-from fastapi import APIRouter, HTTPException
-
-router = APIRouter(prefix="/verification", tags=["Verification"])
-
-@router.get("/{token}")
-def verify_document(token: str):
-    """Verify a document using its QR code token."""
-    # TODO: Add database lookup to check if token exists and is valid
-    return {"status": "verified", "token": token}
->>>>>>> 9528878 (feat: complete backend API with secure env config, MySQL integration, and full documentation)

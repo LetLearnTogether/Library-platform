@@ -34,8 +34,10 @@ import AdminActivityPage from './pages/AdminActivityPage.jsx';
 import LecturerDashboard from './pages/LecturerDashboard.jsx';
 import StudentCoursesPage from './pages/StudentCoursesPage.jsx';
 import CourseRosterPage from './pages/CourseRosterPage.jsx';
+import AboutPage from './pages/AboutPage.jsx';
 import './App.css';
 import './components/layout/PortalTheme.css';
+import './motion.css';
 
 const currentYear = new Date().getFullYear();
 
@@ -51,6 +53,7 @@ function LibraryPage({ portal = false }) {
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const isHome = !portal && location.pathname === '/';
   const {
     courseCode: folderCourseCode,
     year: folderYear,
@@ -90,6 +93,7 @@ function LibraryPage({ portal = false }) {
     : null;
 
   useEffect(() => {
+    if (isHome) return undefined;
     let active = true;
     apiRequest('/courses?page=1&page_size=100')
       .then((result) => {
@@ -102,9 +106,10 @@ function LibraryPage({ portal = false }) {
         if (active) setCourseOptionsLoading(false);
       });
     return () => { active = false; };
-  }, []);
+  }, [isHome]);
 
   useEffect(() => {
+    if (isHome) return undefined;
     let active = true;
     if (folderDocumentType && !folderLecturer) {
       return () => { active = false; };
@@ -140,7 +145,7 @@ function LibraryPage({ portal = false }) {
       active = false;
       window.clearTimeout(timer);
     };
-  }, [search, selectedCourse, selectedYear, selectedSemester, selectedDocumentType, folderDocumentType, folderLecturer, page]);
+  }, [isHome, search, selectedCourse, selectedYear, selectedSemester, selectedDocumentType, folderDocumentType, folderLecturer, page]);
 
   const courses = [...new Set(courseOptions.map((item) => item.course_code))].sort();
   const years = [...new Set(courseOptions.map((item) => item.year))].sort((a, b) => b - a);
@@ -189,7 +194,7 @@ function LibraryPage({ portal = false }) {
         />
       )}
       <main>
-        {!portal && <section className="hero-section">
+        {isHome && <section className="hero-section">
           <div className="hero-content">
             <span className="eyebrow">YOUR LEARNING LIBRARY</span>
             <h1>
@@ -201,28 +206,25 @@ function LibraryPage({ portal = false }) {
               Find study materials, past questions, assignments,
               quizzes, and syllabuses in one place.
             </p>
-            <a className="primary-button hero-button" href="#library">
+            <Link className="primary-button hero-button" to="/library">
               Explore documents <span aria-hidden="true">↓</span>
-            </a>
+            </Link>
           </div>
 
-          <div className="hero-visual" aria-hidden="true">
-            <div className="visual-circle circle-one" />
-            <div className="visual-circle circle-two" />
-            <div className="book-illustration">
-              <div className="book-symbol">L</div>
-              <span>LEARN</span>
-              <span className="book-lines" />
-              <span className="book-lines short" />
-            </div>
-            <div className="floating-note note-top">Study smarter</div>
+          <div className="hero-visual">
+            <img
+              className="hero-image"
+              src="/study-group-hero.png"
+              alt="Students studying together outdoors"
+              fetchPriority="high"
+            />
             <div className="floating-note note-bottom">
               <span>✓</span> Verified resources
             </div>
           </div>
         </section>}
 
-        <section className="library-section" id="library">
+        {!isHome && <section className="library-section" id="library">
           <div className="section-heading">
             <div>
               <span className="eyebrow">STUDY RESOURCES</span>
@@ -443,18 +445,8 @@ function LibraryPage({ portal = false }) {
               <button type="button" className="secondary-button" disabled={page === totalPages} onClick={() => setPage((value) => value + 1)}>Next</button>
             </nav>
           )}
-        </section>
-
-        {!portal && <section className="about-section" id="about">
-          <div>
-            <span className="eyebrow">BUILT FOR LEARNERS</span>
-            <h2>Better resources. Better preparation.</h2>
-          </div>
-          <p>
-            LetLearnTogether brings learning materials together so students
-            can spend less time searching and more time learning.
-          </p>
         </section>}
+
       </main>
 
       {!portal && <footer className="site-footer">
@@ -509,6 +501,7 @@ function AppContent() {
             <Route path="/" element={<Navigate to={roleHome(user.role)} replace />} />
             <Route path="/login" element={<Navigate to={roleHome(user.role)} replace />} />
             <Route path="/register" element={<Navigate to={roleHome(user.role)} replace />} />
+            <Route path="/about" element={<AboutPage portal />} />
             <Route path="/library" element={<LibraryPage portal />} />
             <Route path="/courses/:courseCode/:year/:semester/:documentType" element={<LibraryPage portal />} />
             <Route path="/courses/:courseCode/:year/:semester/:documentType/:lecturer" element={<LibraryPage portal />} />
@@ -549,6 +542,7 @@ function AppContent() {
       <ScrollToHash />
       <Routes>
         <Route path="/" element={<LibraryPage />} />
+        <Route path="/about" element={<AboutPage />} />
         <Route path="/library" element={<LibraryPage />} />
         <Route path="/courses/:courseCode/:year/:semester/:documentType" element={<LibraryPage />} />
         <Route path="/courses/:courseCode/:year/:semester/:documentType/:lecturer" element={<LibraryPage />} />

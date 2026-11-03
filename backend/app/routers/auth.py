@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -43,44 +42,3 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
 @router.get("/me", response_model=UserResponse)
 def me(user: User = Depends(get_current_user)):
     return user
-=======
-from datetime import timedelta
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from backend.app.core.database import get_db
-from backend.app.core.security import get_password_hash, verify_password, create_access_token
-from backend.app.schemas.auth import UserCreate, UserLogin, Token, UserResponse
-from backend.app.models.user import User
-from backend.app.core.config import settings
-
-router = APIRouter(prefix="/auth", tags=["Authentication"])
-
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-def register_user(user: UserCreate, db: Session = Depends(get_db)):
-    db_user = db.query(User).filter(User.email == user.email).first()
-    if db_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
-
-    new_user = User(
-        name=user.name,
-        email=user.email,
-        password_hash=get_password_hash(user.password),
-        role=user.role
-    )
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    return new_user
-
-@router.post("/login", response_model=Token)
-def login_user(credentials: UserLogin, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == credentials.email).first()
-    if not user or not verify_password(credentials.password, user.password_hash):
-        raise HTTPException(status_code=401, detail="Incorrect email or password")
-
-    token = create_access_token(
-        data={"sub": user.email, "role": user.role},
-        expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    )
-    return {"access_token": token, "token_type": "bearer"}
->>>>>>> 9528878 (feat: complete backend API with secure env config, MySQL integration, and full documentation)

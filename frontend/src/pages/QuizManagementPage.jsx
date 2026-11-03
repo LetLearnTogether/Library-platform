@@ -194,7 +194,7 @@ export default function QuizManagementPage() {
   }
 
   async function deleteQuiz(quiz) {
-    if (!window.confirm(`Delete "${quiz.title}"? Quizzes with recorded attempts cannot be deleted.`)) return;
+    if (!window.confirm(`Permanently delete "${quiz.title}", including its questions, recorded attempts, and student performance history? This cannot be undone.`)) return;
     setWorking(true);
     setError('');
     setMessage('');

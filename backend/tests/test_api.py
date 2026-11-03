@@ -423,6 +423,7 @@ def test_review_queue_and_pending_file_are_role_scoped(api):
 
 def test_quiz_creation_server_scoring_and_attempt_history(api):
     lecturer_headers = login(api, "lecturer@example.com")
+    admin_headers = login(api, "admin@example.com")
     student_headers = login(api, "student@example.com")
     created = api.post(
         "/api/v1/quizzes",
@@ -476,17 +477,20 @@ def test_quiz_creation_server_scoring_and_attempt_history(api):
     assert updated.status_code == 200
     refreshed_history = api.get("/api/v1/quiz-attempts/mine", headers=student_headers)
     assert refreshed_history.json()["items"][0]["total_questions"] == 2
-    assert api.delete(
-        f"/api/v1/quizzes/{quiz['id']}",
-        headers=login(api, "lecturer@example.com"),
-    ).status_code == 409
-
     incomplete = api.post(
         f"/api/v1/quizzes/{quiz['id']}/attempts",
         headers=student_headers,
         json={"answers": []},
     )
     assert incomplete.status_code == 422
+
+    deleted = api.delete(
+        f"/api/v1/quizzes/{quiz['id']}",
+        headers=login(api, "admin@example.com"),
+    )
+    assert deleted.status_code == 204
+    assert api.get("/api/v1/quiz-attempts/mine", headers=student_headers).json()["total_items"] == 0
+    assert api.get(f"/api/v1/quizzes/{quiz['id']}/manage", headers=admin_headers).status_code == 404
 
 
 def test_student_course_enrollment_gates_quiz_attempts_and_can_be_left(api):
@@ -774,6 +778,82 @@ def test_admin_catalog_and_user_management(api):
     ).status_code == 200
     assert api.delete(f"/api/v1/users/{user.json()['id']}", headers=admin_headers).status_code == 204
     assert api.delete(f"/api/v1/courses/{course_id}", headers=admin_headers).status_code == 204
+
+
+def test_admin_can_delete_course_with_all_linked_content(api):
+    import app.routers.documents as documents_module
+
+    admin_headers = login(api, "admin@example.com")
+    lecturer_headers = login(api, "lecturer@example.com")
+    student_headers = login(api, "student@example.com")
+    moderator_headers = login(api, "moderator@example.com")
+    course = api.post(
+        "/api/v1/courses",
+        headers=admin_headers,
+        json={
+            "course_code": "DEL101",
+            "course_title": "Course to delete",
+            "year": 2026,
+            "semester": "First",
+            "lecturer_id": 2,
+        },
+    )
+    assert course.status_code == 201, course.text
+    course_id = course.json()["id"]
+
+    announcement = api.post(
+        f"/api/v1/courses/{course_id}/announcements",
+        headers=lecturer_headers,
+        json={"title": "Schedule", "body": "Schedule details."},
+    )
+    assert announcement.status_code == 201, announcement.text
+    assert api.post(f"/api/v1/courses/{course_id}/enrollment", headers=student_headers).status_code == 201
+
+    document = api.post(
+        "/api/v1/documents",
+        headers=student_headers,
+        data={"course_id": str(course_id), "document_type": "Assignment"},
+        files={"file": ("paper.pdf", BytesIO(b"%PDF-1.7\nsample"), "application/pdf")},
+    )
+    assert document.status_code == 201, document.text
+    assert api.post(
+        f"/api/v1/documents/{document.json()['id']}/reports",
+        headers=student_headers,
+        json={"reason": "Needs review."},
+    ).status_code == 201
+
+    quiz = api.post(
+        "/api/v1/quizzes",
+        headers=admin_headers,
+        json={
+            "course_id": course_id,
+            "title": "Quiz to delete with course",
+            "is_published": True,
+            "questions": [
+                {"question_text": "Question?", "options": ["A", "B"], "correct_answer_index": 0}
+            ],
+        },
+    )
+    assert quiz.status_code == 201, quiz.text
+    quiz = quiz.json()
+    assert api.post(
+        f"/api/v1/quizzes/{quiz['id']}/attempts",
+        headers=student_headers,
+        json={
+            "answers": [{"question_id": quiz["questions"][0]["id"], "selected_option_index": 0}]
+        },
+    ).status_code == 201
+
+    uploaded_files = list(documents_module.UPLOAD_DIR.iterdir())
+    assert len(uploaded_files) == 1
+    deleted = api.delete(f"/api/v1/courses/{course_id}", headers=admin_headers)
+    assert deleted.status_code == 204, deleted.text
+    assert api.get(f"/api/v1/courses/{course_id}").status_code == 404
+    assert api.get(f"/api/v1/documents/{document.json()['id']}").status_code == 404
+    assert api.get(f"/api/v1/courses/{course_id}/announcements").status_code == 404
+    assert api.get("/api/v1/reports", headers=moderator_headers).json()["total_items"] == 0
+    assert api.get("/api/v1/quiz-attempts/mine", headers=student_headers).json()["total_items"] == 0
+    assert not list(documents_module.UPLOAD_DIR.iterdir())
 
 
 def test_course_announcements_are_public_and_course_scoped_for_editors(api):

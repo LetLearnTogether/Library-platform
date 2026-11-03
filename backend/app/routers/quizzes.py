@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 from collections import defaultdict
 from decimal import Decimal
 from math import ceil
@@ -319,8 +318,18 @@ def delete_quiz(
 ):
     quiz = require_quiz(db, quiz_id)
     authorize_quiz_editor(quiz, editor)
+    attempt_ids = [
+        attempt_id
+        for (attempt_id,) in db.query(QuizAttempt.id).filter(QuizAttempt.quiz_id == quiz_id).all()
+    ]
+    if attempt_ids:
+        db.query(QuizAttemptAnswer).filter(QuizAttemptAnswer.attempt_id.in_(attempt_ids)).delete(
+            synchronize_session=False
+        )
+    db.query(QuizAttempt).filter(QuizAttempt.quiz_id == quiz_id).delete(synchronize_session=False)
+    db.query(QuizQuestion).filter(QuizQuestion.quiz_id == quiz_id).delete(synchronize_session=False)
     db.delete(quiz)
-    commit_or_conflict(db, "This quiz has recorded attempts and cannot be deleted.")
+    commit_or_conflict(db)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -519,14 +528,3 @@ def list_my_attempts(
         for attempt in result["items"]
     ]
     return result
-=======
-from fastapi import APIRouter
-
-router = APIRouter(prefix="/quizzes", tags=["Quizzes"])
-
-@router.get("/")
-def list_quizzes():
-    """List all available quizzes."""
-    # TODO: Add database query to fetch quizzes
-    return []
->>>>>>> 9528878 (feat: complete backend API with secure env config, MySQL integration, and full documentation)

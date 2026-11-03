@@ -419,7 +419,7 @@ paths:
     delete:
       tags: [Courses]
       summary: Delete a course
-      description: Admin only. Deletion behavior for courses with linked content must be enforced by the service.
+      description: Admin only. Permanently deletes the course, its enrollments and announcements, documents and reports, quizzes and quiz history, and uploaded document files.
       responses:
         '204':
           description: Course deleted
@@ -1268,7 +1268,7 @@ paths:
     delete:
       tags: [Quizzes]
       summary: Delete a quiz
-      description: Lecturer assigned to the course or Admin.
+      description: Lecturer assigned to the course or Admin. Permanently deletes the quiz, its questions, recorded attempts, and student performance history.
       responses:
         '204':
           description: Quiz deleted

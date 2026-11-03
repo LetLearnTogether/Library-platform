@@ -53,12 +53,13 @@
   font-size: 14px;
   font-weight: 600;
   text-decoration: none;
-  transition: background 0.2s ease, color 0.2s ease;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.16s ease;
 }
 
 .navbar-link:hover {
   background: #f0f5fc;
   color: #173b6c;
+  transform: translateY(-1px);
 }
 
 .navbar-link-active {

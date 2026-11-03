@@ -1,0 +1,171 @@
+@keyframes app-page-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes app-content-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes app-dialog-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes app-backdrop-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+#root .app-shell > main[class],
+#root .portal-main > main[class],
+#root .portal-main > .about-page {
+  animation: app-page-enter 520ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+
+#root .app-shell > .navbar {
+  animation: app-content-enter 440ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+
+#root .portal-header {
+  animation: app-content-enter 380ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+
+#root .portal-sidebar {
+  animation: app-content-enter 460ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+
+#root .app-shell > main > .hero-section,
+#root .app-shell > main > .library-section,
+#root .app-shell > main.about-page > :is(header, section),
+#root .portal-main > main > :is(header, section, form),
+#root .portal-main > .about-page > :is(header, section) {
+  animation: app-content-enter 520ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+
+#root .portal-main > main > :is(header, section, form):nth-child(2),
+#root .app-shell > main.about-page > :is(header, section):nth-child(2),
+#root .portal-main > .about-page > :is(header, section):nth-child(2) {
+  animation-delay: 70ms;
+}
+
+#root .portal-main > main > :is(header, section, form):nth-child(3),
+#root .app-shell > main.about-page > :is(header, section):nth-child(3),
+#root .portal-main > .about-page > :is(header, section):nth-child(3) {
+  animation-delay: 130ms;
+}
+
+#root .portal-main > main > :is(header, section, form):nth-child(4),
+#root .app-shell > main.about-page > :is(header, section):nth-child(4),
+#root .portal-main > .about-page > :is(header, section):nth-child(4) {
+  animation-delay: 190ms;
+}
+
+#root .portal-main > main > :is(header, section, form):nth-child(5),
+#root .app-shell > main.about-page > :is(header, section):nth-child(5),
+#root .portal-main > .about-page > :is(header, section):nth-child(5) {
+  animation-delay: 250ms;
+}
+
+#root main[class] :is([class*="grid"], [class*="list"], .recent-documents) > :is(article, a, li),
+#root main[class] :is(.admin-summary, .admin-overview-grid, .admin-management-links) > * {
+  animation: app-content-enter 440ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+
+#root main[class] :is([class*="grid"], [class*="list"], .recent-documents) > :nth-child(2) { animation-delay: 55ms; }
+#root main[class] :is([class*="grid"], [class*="list"], .recent-documents) > :nth-child(3) { animation-delay: 110ms; }
+#root main[class] :is([class*="grid"], [class*="list"], .recent-documents) > :nth-child(4) { animation-delay: 165ms; }
+#root main[class] :is([class*="grid"], [class*="list"], .recent-documents) > :nth-child(5) { animation-delay: 220ms; }
+#root main[class] :is([class*="grid"], [class*="list"], .recent-documents) > :nth-child(6) { animation-delay: 275ms; }
+
+#root main[class] :is(
+  .about-offering-card,
+  .about-purpose-card,
+  .about-community-panel,
+  .dashboard-stat,
+  .quick-link-card,
+  .lecturer-stat,
+  .admin-overview-stat,
+  .admin-role-card,
+  .admin-management-card,
+  .admin-summary article,
+  .document-card,
+  .quiz-card,
+  .staff-card,
+  .verification-card,
+  .login-card,
+  .form-card
+) {
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+#root main[class] :is(
+  .about-offering-card,
+  .about-purpose-card,
+  .about-community-panel,
+  .dashboard-stat,
+  .quick-link-card,
+  .lecturer-stat,
+  .admin-overview-stat,
+  .admin-role-card,
+  .admin-management-card,
+  .document-card,
+  .quiz-card
+):hover {
+  border-color: #b8cdea;
+  box-shadow: 0 12px 28px rgb(23 59 108 / 9%);
+  transform: translateY(-3px);
+}
+
+#root :is(input, select, textarea) {
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+#root :is(input, select, textarea):focus-visible {
+  box-shadow: 0 0 0 4px rgb(96 165 250 / 14%);
+}
+
+.document-report-backdrop {
+  animation: app-backdrop-enter 180ms ease-out backwards;
+}
+
+.document-report-dialog {
+  animation: app-dialog-enter 240ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+
+.navbar-links-open {
+  animation: app-content-enter 220ms ease-out backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root *,
+  #root *::before,
+  #root *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
