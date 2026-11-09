@@ -72,3 +72,9 @@ export function getVerificationUrl(token) {
 export function getVerificationQrUrl(token) {
   return `${API_BASE_URL}/verification/${encodeURIComponent(token)}/qr`;
 }
+
+export async function downloadDocument(documentId, disposition = 'inline') {
+  const response = await apiRequest(`/documents/${encodeURIComponent(documentId)}/content?disposition=${disposition}`);
+  if (!(response instanceof Response)) throw new Error('Document file could not be opened.');
+  return response;
+}

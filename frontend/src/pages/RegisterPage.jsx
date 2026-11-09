@@ -85,7 +85,7 @@ export default function RegisterPage() {
         email: form.email.trim(),
         password: form.password,
       });
-      navigate('/student-dashboard', { replace: true });
+      navigate('/', { replace: true });
     } catch (error) {
       setMessage(error.message || 'Unable to create your account. Please try again.');
       setMessageType('error');

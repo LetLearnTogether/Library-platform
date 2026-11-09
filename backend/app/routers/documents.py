@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile, status
@@ -21,6 +22,7 @@ from app.services.api import (
     require_platform_settings,
     record_activity,
 )
+from app.services.document_stamp import stamp_document
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 reviewer_roles = require_roles("Lecturer", "Moderator", "Admin")
@@ -165,6 +167,13 @@ async def upload_document(
     try:
         db.flush()
         if lecturer_upload:
+            stamp_document(
+                destination,
+                expected_type,
+                document.id,
+                document.verification_token,
+                datetime.now(timezone.utc),
+            )
             record_activity(
                 db,
                 user,
@@ -182,7 +191,11 @@ async def upload_document(
 
 
 @router.get("/{document_id}", response_model=DocumentResponse)
-def get_document(document_id: int, db: Session = Depends(get_db)):
+def get_document(
+    document_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
     return document_output(load_public_document(db, document_id))
 
 
@@ -191,11 +204,21 @@ def get_document_content(
     document_id: int,
     disposition: str = Query(default="inline", pattern="^(inline|attachment)$"),
     db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
     document = load_public_document(db, document_id)
     file_path = Path(document.file_path).resolve()
     if not file_path.is_relative_to(UPLOAD_DIR.resolve()) or not file_path.is_file():
         raise HTTPException(status_code=404, detail="The requested document file is not available.")
+    record_activity(
+        db,
+        user,
+        "download" if disposition == "attachment" else "view",
+        "document",
+        document.id,
+        f"{'Downloaded' if disposition == 'attachment' else 'Viewed'} {document.filename}.",
+    )
+    commit_or_conflict(db)
     return FileResponse(
         file_path,
         media_type=document.content_type,
@@ -246,8 +269,15 @@ def review_document(
     if payload.action == "approve":
         document.status = "Verified"
         document.approved_by = reviewer.id
-        document.approved_at = func.now()
+        document.approved_at = datetime.now(timezone.utc)
         document.verification_token = str(uuid.uuid4())
+        stamp_document(
+            Path(document.file_path),
+            document.content_type,
+            document.id,
+            document.verification_token,
+            document.approved_at,
+        )
     else:
         document.status = "Rejected"
     record_activity(

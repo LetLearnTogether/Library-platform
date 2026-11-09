@@ -56,16 +56,6 @@ function Navbar() {
         </NavLink>
 
         <NavLink
-          to="/library"
-          className={({ isActive }) =>
-            `navbar-link ${isActive ? 'navbar-link-active' : ''}`
-          }
-          onClick={closeMenu}
-        >
-          Document Library
-        </NavLink>
-
-        <NavLink
           to="/about"
           className={({ isActive }) =>
             `navbar-link ${isActive ? 'navbar-link-active' : ''}`

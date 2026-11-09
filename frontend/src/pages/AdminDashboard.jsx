@@ -71,6 +71,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
+  const [analytics, setAnalytics] = useState({ total_downloads: 0, popular_documents: [], popular_courses: [] });
 
   useEffect(() => {
     let active = true;
@@ -79,8 +80,9 @@ export default function AdminDashboard() {
       apiRequest('/courses?page=1&page_size=1'),
       apiRequest('/documents/review-queue?page=1&page_size=1'),
       apiRequest('/reports?page=1&page_size=1&status=Open'),
+      apiRequest('/activity/analytics/documents'),
     ])
-      .then(([accounts, courses, reviews, reports]) => {
+      .then(([accounts, courses, reviews, reports, documentAnalytics]) => {
         if (!active) return;
         setOverview({
           accounts: accounts.total_items,
@@ -88,6 +90,7 @@ export default function AdminDashboard() {
           reviews: reviews.total_items,
           reports: reports.total_items,
         });
+        setAnalytics(documentAnalytics);
       })
       .catch((requestError) => {
         if (active) setError(requestError.message || 'The administration overview could not be loaded.');
@@ -142,6 +145,25 @@ export default function AdminDashboard() {
             </div>
           </article>
         ))}
+      </section>
+      <section className="admin-document-analytics" aria-labelledby="document-analytics-title">
+        <div className="admin-panel-heading">
+          <span className="admin-panel-kicker">DOCUMENT ANALYTICS</span>
+          <h2 id="document-analytics-title">Downloads and popular resources</h2>
+        </div>
+        <strong>{analytics.total_downloads} total downloads</strong>
+        <div className="admin-document-analytics-grid">
+          <article>
+            <h3>Popular documents</h3>
+            {analytics.popular_documents.map((item) => <div key={item.document_id}><span>{item.filename}</span><b>{item.downloads}</b></div>)}
+            {analytics.popular_documents.length === 0 && <p>No downloads yet.</p>}
+          </article>
+          <article>
+            <h3>Popular courses</h3>
+            {analytics.popular_courses.map((item) => <div key={item.course_code}><span>{item.course_code}</span><b>{item.downloads}</b></div>)}
+            {analytics.popular_courses.length === 0 && <p>No course activity yet.</p>}
+          </article>
+        </div>
       </section>
       {loading && <p className="admin-overview-loading" role="status">Loading platform totals…</p>}
 
