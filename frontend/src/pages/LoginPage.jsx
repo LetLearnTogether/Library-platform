@@ -42,7 +42,7 @@ function LoginPage() {
       navigate(
         requestedPath && !requestedPathIsRestricted
           ? requestedPath
-          : user.role === 'Admin' ? '/admin' : isStaff ? '/staff' : '/student-dashboard',
+          : '/',
         { replace: true },
       );
     } catch (error) {

@@ -255,7 +255,7 @@ def test_documents_moderator_approval_verification_and_file(api):
     assert public.status_code == 200
     assert public.json()["status"] == "Verified"
 
-    content = api.get(f"/api/v1/documents/{document['id']}/content")
+    content = api.get(f"/api/v1/documents/{document['id']}/content", headers=student_headers)
     assert content.status_code == 200
     assert content.content.startswith(b"%PDF-")
     assert "inline" in content.headers["content-disposition"]
@@ -272,7 +272,7 @@ def test_documents_moderator_approval_verification_and_file(api):
     revoked_qr = api.get(f"/api/v1/verification/{verified['verification_token']}/qr")
     assert revoked_qr.status_code == 200
     assert revoked_qr.headers["content-type"] == "image/png"
-    assert api.get(f"/api/v1/documents/{document['id']}/content").status_code == 404
+    assert api.get(f"/api/v1/documents/{document['id']}/content", headers=student_headers).status_code == 404
 
 
 def test_moderator_can_remove_document_file(api):
@@ -292,13 +292,13 @@ def test_moderator_can_remove_document_file(api):
         json={"action": "approve"},
     )
     assert approved.status_code == 200, approved.text
-    assert api.get(f"/api/v1/documents/{document_id}/content").status_code == 200
+    assert api.get(f"/api/v1/documents/{document_id}/content", headers=student_headers).status_code == 200
 
     removed = api.delete(f"/api/v1/documents/{document_id}", headers=moderator_headers)
 
     assert removed.status_code == 204
-    assert api.get(f"/api/v1/documents/{document_id}/content").status_code == 404
-    assert api.get(f"/api/v1/documents/{document_id}").status_code == 404
+    assert api.get(f"/api/v1/documents/{document_id}/content", headers=student_headers).status_code == 404
+    assert api.get(f"/api/v1/documents/{document_id}", headers=student_headers).status_code == 404
 
 
 def test_upload_validation_and_course_scoped_review(api):
@@ -372,7 +372,7 @@ def test_lecturer_uploads_only_to_assigned_courses_and_manages_own_materials(api
     assert material.json()["status"] == "Verified"
     assert material.json()["approved_by"] == 2
     assert material.json()["verification_token"]
-    public_list = api.get("/api/v1/documents", params={"course_id": 1})
+    public_list = api.get("/api/v1/documents", params={"course_id": 1}, headers=student_headers)
     assert material.json()["id"] in [document["id"] for document in public_list.json()["items"]]
     assert api.get("/api/v1/documents/mine", headers=lecturer_headers).json()["items"][0]["id"] == material.json()["id"]
 
@@ -396,7 +396,7 @@ def test_lecturer_uploads_only_to_assigned_courses_and_manages_own_materials(api
         f"/api/v1/documents/{material.json()['id']}",
         headers=lecturer_headers,
     ).status_code == 204
-    assert api.get(f"/api/v1/documents/{material.json()['id']}").status_code == 404
+    assert api.get(f"/api/v1/documents/{material.json()['id']}", headers=student_headers).status_code == 404
 
 
 def test_review_queue_and_pending_file_are_role_scoped(api):
@@ -418,7 +418,7 @@ def test_review_queue_and_pending_file_are_role_scoped(api):
     preview = api.get(f"/api/v1/documents/{document_id}/review-content", headers=lecturer_headers)
     assert preview.status_code == 200
     assert preview.content.startswith(b"%PDF-")
-    assert api.get(f"/api/v1/documents/{document_id}/content").status_code == 404
+    assert api.get(f"/api/v1/documents/{document_id}/content", headers=lecturer_headers).status_code == 404
 
 
 def test_quiz_creation_server_scoring_and_attempt_history(api):
@@ -849,7 +849,7 @@ def test_admin_can_delete_course_with_all_linked_content(api):
     deleted = api.delete(f"/api/v1/courses/{course_id}", headers=admin_headers)
     assert deleted.status_code == 204, deleted.text
     assert api.get(f"/api/v1/courses/{course_id}").status_code == 404
-    assert api.get(f"/api/v1/documents/{document.json()['id']}").status_code == 404
+    assert api.get(f"/api/v1/documents/{document.json()['id']}", headers=student_headers).status_code == 404
     assert api.get(f"/api/v1/courses/{course_id}/announcements").status_code == 404
     assert api.get("/api/v1/reports", headers=moderator_headers).json()["total_items"] == 0
     assert api.get("/api/v1/quiz-attempts/mine", headers=student_headers).json()["total_items"] == 0

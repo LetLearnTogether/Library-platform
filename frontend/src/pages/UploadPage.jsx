@@ -6,7 +6,7 @@ import { usePlatformSettings } from '../settings/PlatformSettingsContext.js';
 import { DocumentSubmissionsPanel } from './DocumentHistoryPage.jsx';
 
 const documentTypes = ['Midterm', 'Final', 'Assignment', 'Quiz', 'Syllabus'];
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_FILE_SIZE = 1024 * 1024;
 const allowedFileTypes = {
   pdf: { mime: 'application/pdf', label: 'PDF' },
   jpg: { mime: 'image/jpeg', label: 'JPEG' },
@@ -24,7 +24,7 @@ function validateFile(file) {
   const expected = allowedFileTypes[extension];
   if (!expected) return 'Choose a PDF, JPEG, PNG, or WebP file.';
   if (file.type !== expected.mime) return `The selected file is not recognized as ${expected.label}. Choose a valid ${expected.label} file.`;
-  if (file.size > MAX_FILE_SIZE) return 'The selected file exceeds the 10 MiB upload limit.';
+  if (file.size > MAX_FILE_SIZE) return 'The selected file exceeds the 1 MiB upload limit.';
   if (file.size === 0) return 'The selected file is empty. Choose a file with content.';
   return '';
 }
@@ -191,7 +191,7 @@ export default function UploadPage() {
               </select>
             </label>
             <label>
-              File (PDF, JPEG, PNG, WebP; maximum 10 MiB)
+              File (PDF, JPEG, PNG, WebP; maximum 1 MiB)
               <input
                 ref={fileInputRef}
                 type="file"

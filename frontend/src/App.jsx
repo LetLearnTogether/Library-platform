@@ -10,9 +10,8 @@ import Navbar from './components/layout/Navbar.jsx';
 import AuthenticatedLayout from './components/layout/AuthenticatedLayout.jsx';
 import ScrollToHash from './components/layout/ScrollToHash.jsx';
 import RequireAuth from './components/auth/RequireAuth.jsx';
-import { apiRequest, getDocumentContentUrl, getVerificationUrl } from './lib/api.js';
+import { downloadDocument, apiRequest, getVerificationUrl } from './lib/api.js';
 import DocumentReportDialog from './components/documents/DocumentReportDialog.jsx';
-import LibraryFolderBrowser from './components/documents/LibraryFolderBrowser.jsx';
 import CourseAnnouncements from './components/CourseAnnouncements.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import RegisterPage from './pages/RegisterPage.jsx';
@@ -68,7 +67,6 @@ function LibraryPage({ portal = false }) {
   const [documentType, setDocumentType] = useState('All');
   const [documents, setDocuments] = useState([]);
   const [courseOptions, setCourseOptions] = useState([]);
-  const [courseOptionsLoading, setCourseOptionsLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [totalItems, setTotalItems] = useState(0);
@@ -91,9 +89,31 @@ function LibraryPage({ portal = false }) {
   const selectedCourseDetails = folderCourseCode
     ? courseOptions.find((item) => item.course_code.toLowerCase() === folderCourseCode.toLowerCase())
     : null;
+  const normalizedSearch = search.trim().toLowerCase();
+  const searchSuggestions = normalizedSearch
+    ? [...new Map([
+      ...documents.map((document) => [
+        `${document.course.course_code}-${document.filename}`,
+        {
+          label: document.filename,
+          detail: document.course.course_code,
+          value: document.filename,
+        },
+      ]),
+      ...courseOptions.map((courseOption) => [
+        `${courseOption.course_code}-${courseOption.course_title}`,
+        {
+          label: courseOption.course_code,
+          detail: courseOption.course_title,
+          value: courseOption.course_code,
+        },
+      ]),
+    ]).values()]
+      .filter((suggestion) => `${suggestion.label} ${suggestion.detail}`.toLowerCase().includes(normalizedSearch))
+      .slice(0, 6)
+    : [];
 
   useEffect(() => {
-    if (isHome) return undefined;
     let active = true;
     apiRequest('/courses?page=1&page_size=100')
       .then((result) => {
@@ -102,14 +122,10 @@ function LibraryPage({ portal = false }) {
       .catch((requestError) => {
         if (active) setCourseError(requestError.message || 'Course filters are temporarily unavailable.');
       })
-      .finally(() => {
-        if (active) setCourseOptionsLoading(false);
-      });
     return () => { active = false; };
   }, [isHome]);
 
   useEffect(() => {
-    if (isHome) return undefined;
     let active = true;
     if (folderDocumentType && !folderLecturer) {
       return () => { active = false; };
@@ -139,7 +155,7 @@ function LibraryPage({ portal = false }) {
         .finally(() => {
           if (active) setLoading(false);
         });
-    }, search.trim() ? 250 : 0);
+    }, search.trim() ? 150 : 0);
 
     return () => {
       active = false;
@@ -166,16 +182,33 @@ function LibraryPage({ portal = false }) {
     setPage(1);
   }
 
+  async function openDocumentFile(document, disposition) {
+    if (!user) {
+      navigate('/login', { state: { from: location } });
+      return;
+    }
+    const response = await downloadDocument(document.id, disposition);
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    if (disposition === 'inline') {
+      window.open(objectUrl, '_blank', 'noopener,noreferrer');
+    } else {
+      const link = window.document.createElement('a');
+      link.href = objectUrl;
+      link.download = document.filename || 'document';
+      window.document.body.appendChild(link);
+      link.click();
+      link.remove();
+    }
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+  }
+
   function handleView(document) {
-    window.open(getDocumentContentUrl(document.id), '_blank', 'noopener,noreferrer');
+    void openDocumentFile(document, 'inline');
   }
 
   function handleDownload(document) {
-    const link = window.document.createElement('a');
-    link.href = getDocumentContentUrl(document.id, 'attachment');
-    window.document.body.appendChild(link);
-    link.click();
-    link.remove();
+    void openDocumentFile(document, 'attachment');
   }
 
   function handleReportSubmitted(documentId) {
@@ -206,7 +239,7 @@ function LibraryPage({ portal = false }) {
               Find study materials, past questions, assignments,
               quizzes, and syllabuses in one place.
             </p>
-            <Link className="primary-button hero-button" to="/library">
+            <Link className="primary-button hero-button" to="/#library">
               Explore documents <span aria-hidden="true">↓</span>
             </Link>
           </div>
@@ -214,8 +247,8 @@ function LibraryPage({ portal = false }) {
           <div className="hero-visual">
             <img
               className="hero-image"
-              src="/study-group-hero.png"
-              alt="Students studying together outdoors"
+              src="/campus-hero.webp"
+              alt="William V. S. Tubman University campus"
               fetchPriority="high"
             />
             <div className="floating-note note-bottom">
@@ -224,7 +257,7 @@ function LibraryPage({ portal = false }) {
           </div>
         </section>}
 
-        {!isHome && <section className="library-section" id="library">
+        <section className="library-section" id="library">
           <div className="section-heading">
             <div>
               <span className="eyebrow">STUDY RESOURCES</span>
@@ -242,29 +275,52 @@ function LibraryPage({ portal = false }) {
             </div>
           </div>
 
-          <LibraryFolderBrowser
-            courses={courseOptions}
-            loading={courseOptionsLoading}
-            error={courseError}
-            courseCode={folderCourseCode}
-            year={folderYear}
-            semester={folderSemester}
-            documentType={folderDocumentType}
-            lecturer={folderLecturer}
-          />
           {folderCourseCode && <CourseAnnouncements course={selectedCourseDetails} />}
 
-          <div className="search-panel">
-            <label className="search-box">
-              <span aria-hidden="true">⌕</span>
-              <input
-                type="search"
-                value={search}
-                onChange={(event) => { setSearch(event.target.value); setPage(1); }}
-                placeholder="Search by course code or title..."
-                aria-label="Search documents"
-              />
-            </label>
+          <div className="search-panel home-search-panel">
+            <div className="smart-search">
+              <label className="search-box" htmlFor="document-library-search">
+                <span aria-hidden="true">⌕</span>
+                <input
+                  id="document-library-search"
+                  type="search"
+                  value={search}
+                  onChange={(event) => { setSearch(event.target.value); setPage(1); }}
+                  placeholder="Search by course code, title, or document type..."
+                  aria-label="Search documents"
+                  autoComplete="off"
+                />
+                {search && (
+                  <button
+                    className="search-clear-button"
+                    type="button"
+                    onClick={() => { setSearch(''); setPage(1); }}
+                    aria-label="Clear document search"
+                  >
+                    ×
+                  </button>
+                )}
+              </label>
+              {searchSuggestions.length > 0 && (
+                <div className="search-suggestions" role="listbox" aria-label="Search suggestions">
+                  {searchSuggestions.map((suggestion) => (
+                    <button
+                      key={`${suggestion.label}-${suggestion.detail}`}
+                      type="button"
+                      role="option"
+                      aria-selected="false"
+                      onClick={() => { setSearch(suggestion.value); setPage(1); }}
+                    >
+                      <span className="suggestion-icon" aria-hidden="true">⌕</span>
+                      <span>
+                        <strong>{suggestion.label}</strong>
+                        <small>{suggestion.detail}</small>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
             <button
               className="reset-button"
@@ -445,7 +501,7 @@ function LibraryPage({ portal = false }) {
               <button type="button" className="secondary-button" disabled={page === totalPages} onClick={() => setPage((value) => value + 1)}>Next</button>
             </nav>
           )}
-        </section>}
+        </section>
 
       </main>
 
@@ -498,9 +554,9 @@ function AppContent() {
         <AuthenticatedLayout>
           <ScrollToHash />
           <Routes>
-            <Route path="/" element={<Navigate to={roleHome(user.role)} replace />} />
-            <Route path="/login" element={<Navigate to={roleHome(user.role)} replace />} />
-            <Route path="/register" element={<Navigate to={roleHome(user.role)} replace />} />
+            <Route path="/" element={<LibraryPage portal />} />
+            <Route path="/login" element={<Navigate to="/" replace />} />
+            <Route path="/register" element={<Navigate to="/" replace />} />
             <Route path="/about" element={<AboutPage portal />} />
             <Route path="/library" element={<LibraryPage portal />} />
             <Route path="/courses/:courseCode/:year/:semester/:documentType" element={<LibraryPage portal />} />

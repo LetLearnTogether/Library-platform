@@ -180,6 +180,15 @@ export function DocumentSubmissionsPanel({ embedded = false }) {
 }
 
 export default function DocumentHistoryPage() {
+  const [downloads, setDownloads] = useState([]);
+  const [downloadError, setDownloadError] = useState('');
+
+  useEffect(() => {
+    apiRequest('/activity/downloads/mine?limit=20')
+      .then(setDownloads)
+      .catch((requestError) => setDownloadError(requestError.message || 'Download history could not be loaded.'));
+  }, []);
+
   return (
     <main className="document-history-page">
       <header className="document-history-header">
@@ -190,6 +199,21 @@ export default function DocumentHistoryPage() {
         </div>
         <Link to="/upload" className="document-history-upload-link">Upload a document</Link>
       </header>
+      <section className="document-history-downloads" aria-labelledby="download-history-title">
+        <div><p className="eyebrow">RECENT ACCESS</p><h2 id="download-history-title">Downloaded documents</h2></div>
+        {downloadError && <p role="alert">{downloadError}</p>}
+        {!downloadError && downloads.length === 0 && <p>No documents downloaded yet.</p>}
+        {downloads.length > 0 && (
+          <div className="document-history-table">
+            {downloads.map((item) => (
+              <article key={`${item.document_id}-${item.downloaded_at}`}>
+                <div><strong>{item.filename}</strong>{item.course_code && <span>{item.course_code}</span>}</div>
+                <time dateTime={item.downloaded_at}>{new Date(item.downloaded_at).toLocaleString()}</time>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
       <DocumentSubmissionsPanel />
     </main>
   );

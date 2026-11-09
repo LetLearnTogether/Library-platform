@@ -6,6 +6,45 @@
   color: #1e293b;
 }
 
+.document-history-downloads {
+  margin-bottom: 24px;
+  padding: clamp(18px, 3vw, 28px);
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.document-history-downloads h2 {
+  margin: 4px 0 18px;
+  color: #173b6c;
+}
+
+.document-history-table {
+  display: grid;
+  gap: 10px;
+}
+
+.document-history-table article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.document-history-table article div {
+  display: grid;
+  gap: 3px;
+}
+
+.document-history-table article span,
+.document-history-table time {
+  color: #64748b;
+  font-size: 13px;
+}
+
 .document-history-header {
   display: flex;
   align-items: flex-start;
