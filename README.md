@@ -32,6 +32,7 @@ Project requirements and engineering references:
 * [Backend delivery checklist](docs/backend-delivery.md)
 * [MySQL schema reference](docs/schema.sql)
 * [Production deployment runbook](docs/production-deployment.md)
+* [Search engine indexing and Google Search Console](docs/seo.md)
 
 ## 🚀 Getting Started (Local Development)
 

@@ -34,6 +34,7 @@ import LecturerDashboard from './pages/LecturerDashboard.jsx';
 import StudentCoursesPage from './pages/StudentCoursesPage.jsx';
 import CourseRosterPage from './pages/CourseRosterPage.jsx';
 import AboutPage from './pages/AboutPage.jsx';
+import SeoMetadata from './components/SeoMetadata.jsx';
 import './App.css';
 import './components/layout/PortalTheme.css';
 import './motion.css';
@@ -635,6 +636,7 @@ function App() {
   return (
     <AuthProvider>
       <PlatformSettingsProvider>
+        <SeoMetadata />
         <AppContent />
       </PlatformSettingsProvider>
     </AuthProvider>
