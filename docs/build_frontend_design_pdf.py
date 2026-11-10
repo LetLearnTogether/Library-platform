@@ -437,7 +437,7 @@ SCREENS: list[dict[str, object]] = [
      "details": ["Review status", "File and course", "Submitted date", "Review note", "View document", "Verify stamp"]},
     {"role": "Student", "kind": "form", "title": "My uploads", "route": "/upload",
      "subtitle": "Course/type/file upload form with validation and embedded submission history.",
-     "details": ["Course", "Document type", "Choose a file", "PDF / JPEG / PNG / WebP · 10 MiB", "Upload document"]},
+        "details": ["Course", "Document type", "Choose a file", "PDF / JPEG / PNG / WebP · 1 MiB", "Upload document"]},
     {"role": "Lecturer", "kind": "dashboard", "title": "Teaching overview", "route": "/lecturer (also signed-in /)",
      "subtitle": "Assigned course summaries, review counts, quizzes, and learning insights.",
      "details": ["Awaiting review", "Your quizzes", "Assigned courses", "Student quiz attempts", "Course roster", "Quiz reports", "Course materials", "Announcements"]},

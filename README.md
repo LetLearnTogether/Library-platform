@@ -91,7 +91,7 @@ alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
-On first startup, SQLAlchemy creates missing tables in the configured database. The MySQL schema reference is in [docs/schema.sql](docs/schema.sql). For a stable deployment, set `SECRET_KEY`, `DATABASE_URL` (or the `DB_*` values), `PUBLIC_API_BASE_URL`, `PUBLIC_FRONTEND_URL`, `CORS_ORIGINS`, and `UPLOAD_DIR` in `backend/.env`. Uploaded files are limited to 10 MiB by default and stored in `backend/uploads/`.
+On first startup, SQLAlchemy creates missing tables in the configured database. The MySQL schema reference is in [docs/schema.sql](docs/schema.sql). For a stable deployment, set `SECRET_KEY`, `DATABASE_URL` (or the `DB_*` values), `PUBLIC_API_BASE_URL`, `PUBLIC_FRONTEND_URL`, `CORS_ORIGINS`, and `UPLOAD_DIR` in `backend/.env`. Uploaded files are limited to 1 MiB by default and stored in `backend/uploads/`.
 
 Apply the database migration with `alembic upgrade head` from `backend/` before running the API locally. Migrations do not automatically change an existing production schema; coordinate all schema updates with the database team.
 

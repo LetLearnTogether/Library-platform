@@ -6,7 +6,7 @@ import { usePlatformSettings } from '../settings/PlatformSettingsContext.js';
 import { DocumentSubmissionsPanel } from './DocumentHistoryPage.jsx';
 
 const documentTypes = ['Midterm', 'Final', 'Assignment', 'Quiz', 'Syllabus'];
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_FILE_SIZE = 1024 * 1024;
 const allowedFileTypes = new Set(['pdf', 'jpg', 'jpeg', 'png', 'webp']);
 
 function fetchCourses() {
@@ -16,7 +16,7 @@ function fetchCourses() {
 function validateFile(file) {
   const extension = file.name.split('.').pop()?.toLowerCase();
   if (!allowedFileTypes.has(extension)) return 'Choose a PDF, JPEG, PNG, or WebP file.';
-  if (file.size > MAX_FILE_SIZE) return 'The selected file exceeds the 10 MiB upload limit.';
+  if (file.size > MAX_FILE_SIZE) return 'The selected file exceeds the 1 MiB upload limit.';
   if (file.size === 0) return 'The selected file is empty. Choose a file with content.';
   return '';
 }
@@ -182,16 +182,28 @@ export default function UploadPage() {
                 {documentTypes.map((type) => <option key={type}>{type}</option>)}
               </select>
             </label>
-            <label>
-              File (PDF, JPEG, PNG, WebP; maximum 10 MiB)
+            <div className="upload-file-field">
+              <label htmlFor="document-upload-file">
+                File (PDF, JPEG, PNG, WebP; maximum 1 MiB)
+              </label>
               <input
+                id="document-upload-file"
                 ref={fileInputRef}
+                className="upload-file-input"
                 type="file"
                 accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
                 onChange={handleFileChange}
-                required
+                aria-hidden="true"
+                tabIndex={-1}
               />
-            </label>
+              <button
+                type="button"
+                className="secondary-button upload-file-picker"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                Choose file
+              </button>
+            </div>
             {file && (
               <div className="upload-file-summary" aria-live="polite">
                 <span><strong>{file.name}</strong><small>{formatFileSize(file.size)}</small></span>

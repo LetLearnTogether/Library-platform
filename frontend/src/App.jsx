@@ -73,6 +73,7 @@ function LibraryPage({ portal = false }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [documentActionError, setDocumentActionError] = useState('');
+  const [documentActionStatus, setDocumentActionStatus] = useState('');
   const [courseError, setCourseError] = useState('');
   const [reportingDocument, setReportingDocument] = useState(null);
   const [reportedDocumentIds, setReportedDocumentIds] = useState(() => new Set());
@@ -197,6 +198,11 @@ function LibraryPage({ portal = false }) {
     }
 
     setDocumentActionError('');
+    setDocumentActionStatus(disposition === 'inline' ? 'Loading document preview…' : 'Preparing document download…');
+    if (previewWindow) {
+      previewWindow.document.title = 'Loading document';
+      previewWindow.document.body.textContent = 'Loading document preview…';
+    }
     try {
       const response = await downloadDocument(document.id, disposition);
       const objectUrl = URL.createObjectURL(await response.blob());
@@ -212,8 +218,10 @@ function LibraryPage({ portal = false }) {
         link.remove();
       }
       window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+      setDocumentActionStatus('');
     } catch (requestError) {
       previewWindow?.close();
+      setDocumentActionStatus('');
       setDocumentActionError(requestError.message || 'The document could not be opened.');
     }
   }
@@ -290,6 +298,7 @@ function LibraryPage({ portal = false }) {
             </div>
           </div>
 
+          {documentActionStatus && <p className="app-status" role="status">{documentActionStatus}</p>}
           {documentActionError && <p className="app-status" role="alert">{documentActionError}</p>}
           {folderCourseCode && <CourseAnnouncements course={selectedCourseDetails} />}
 

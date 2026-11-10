@@ -140,6 +140,29 @@
   line-height: 1.6;
 }
 
+.upload-file-field {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+}
+
+.upload-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.upload-file-picker {
+  min-height: 48px;
+  touch-action: manipulation;
+}
+
 .document-history-panel-heading {
   display: flex;
   align-items: flex-start;

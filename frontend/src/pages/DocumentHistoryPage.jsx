@@ -18,6 +18,7 @@ export function DocumentSubmissionsPanel({ embedded = false }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [viewError, setViewError] = useState('');
+  const [viewingId, setViewingId] = useState(null);
   const [workingId, setWorkingId] = useState(null);
   const [message, setMessage] = useState('');
 
@@ -69,6 +70,9 @@ export function DocumentSubmissionsPanel({ embedded = false }) {
       return;
     }
     setViewError('');
+    setViewingId(document.id);
+    previewWindow.document.title = 'Loading document';
+    previewWindow.document.body.textContent = 'Loading document preview…';
     try {
       const response = await downloadDocument(document.id);
       const objectUrl = URL.createObjectURL(await response.blob());
@@ -78,6 +82,8 @@ export function DocumentSubmissionsPanel({ embedded = false }) {
     } catch (requestError) {
       previewWindow.close();
       setViewError(requestError.message || 'The document could not be opened.');
+    } finally {
+      setViewingId(null);
     }
   }
 
@@ -145,7 +151,14 @@ export function DocumentSubmissionsPanel({ embedded = false }) {
                       <span className={`document-history-status status-${normalizedStatus}`}>{document.status}</span>
                       {document.status === 'Verified' && (
                         <>
-                          <button type="button" className="document-history-button" onClick={() => void viewDocument(document)}>View document</button>
+                          <button
+                            type="button"
+                            className="document-history-button"
+                            disabled={viewingId === document.id}
+                            onClick={() => void viewDocument(document)}
+                          >
+                            {viewingId === document.id ? 'Opening…' : 'View document'}
+                          </button>
                           {document.verification_token && (
                             <Link to={getVerificationUrl(document.verification_token)}>Verify stamp</Link>
                           )}

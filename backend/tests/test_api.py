@@ -352,7 +352,7 @@ def test_lecturer_phone_image_upload_is_verified_and_stamped(api):
             assert stamped_image.convert("RGB").tobytes() != original_image.tobytes()
 
 
-def test_upload_validation_and_course_scoped_review(api):
+def test_upload_validation_and_course_scoped_review(api, monkeypatch):
     student_headers = login(api, "student@example.com")
     lecturer_headers = login(api, "lecturer@example.com")
     other_lecturer_headers = login(api, "other-lecturer@example.com")
@@ -365,6 +365,16 @@ def test_upload_validation_and_course_scoped_review(api):
     )
     assert bad_upload.status_code == 415
     assert bad_upload.json()["error_code"] == "UNSUPPORTED_MEDIA_TYPE"
+
+    import app.routers.documents as documents_module
+    monkeypatch.setattr(documents_module, "MAX_UPLOAD_SIZE_BYTES", 1024 * 1024)
+    oversized_upload = api.post(
+        "/api/v1/documents",
+        headers=student_headers,
+        data={"course_id": "1", "document_type": "Midterm"},
+        files={"file": ("large.pdf", BytesIO(b"x" * (1024 * 1024 + 1)), "application/pdf")},
+    )
+    assert oversized_upload.status_code == 413
 
     malformed_pdf = api.post(
         "/api/v1/documents",
@@ -381,7 +391,7 @@ def test_upload_validation_and_course_scoped_review(api):
         files={
             "file": (
                 "phone-upload.pdf",
-                BytesIO(create_test_pdf() + b"\n%" + b"x" * (1024 * 1024 + 1)),
+                BytesIO(create_test_pdf() + b"\n%" + b"x" * (512 * 1024)),
                 "application/octet-stream",
             )
         },

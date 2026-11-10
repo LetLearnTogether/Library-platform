@@ -99,7 +99,7 @@ public interface.
 | 6 | `/quizzes/:quizId` after submission | **Quiz result.** “Your Results,” quiz and course, server-calculated score, Try Again, and Back to Dashboard. |
 | 7 | `/quiz-history` | **Quiz history.** Paginated attempts with quiz title, date, question count, and score; empty/loading/error states and a link back to quizzes. |
 | 8 | `/document-history` | **Document submissions.** Upload action; submissions list with status filter, file/course/type/date, review note, verified-document and verification links where applicable, pagination, and empty/loading/error states. |
-| 9 | `/upload` | **My uploads.** Course and document-type selectors, accepted file selection (PDF/JPEG/PNG/WebP; 10 MiB limit), file summary/removal, upload action, validation/submission feedback, and embedded upload-history panel. If student uploads are disabled, the upload form is replaced with the paused notice while history remains available. |
+| 9 | `/upload` | **My uploads.** Course and document-type selectors, accepted file selection (PDF/JPEG/PNG/WebP; 1 MiB limit), file summary/removal, upload action, validation/submission feedback, and embedded upload-history panel. If student uploads are disabled, the upload form is replaced with the paused notice while history remains available. |
 | 10 | `/verify` and `/verify/:token` | **Document verification.** Shared verification form and result states described above. |
 
 ## 5. Lecturer interfaces

@@ -15,7 +15,7 @@ The requirements source is the [PRD](../LetLearnTogether_PRD_v3.md) and [SRS](..
 - Errors use `{ "error_code": "...", "message": "...", "request_id": "..." }`.
 - Protected operations use `Authorization: Bearer <JWT>`. Public operations explicitly disable bearer authentication in the OpenAPI contract.
 - Passwords are bcrypt-hashed. Because bcrypt accepts at most 72 UTF-8 bytes, inputs beyond that limit are rejected.
-- Uploads are restricted to PDF, JPEG, PNG, and WebP, with both extension and content validation. The current default maximum size is 10 MiB.
+- Uploads are restricted to PDF, JPEG, PNG, and WebP, with both extension and content validation. The current default maximum size is 1 MiB.
 - Quiz read responses never expose correct-answer indexes. The server calculates submitted scores from stored answer keys.
 
 ## Endpoint groups
