@@ -700,7 +700,7 @@ paths:
     post:
       tags: [Documents]
       summary: Upload a document or publish assigned-course material
-      description: Students may submit documents to any existing course when uploads are enabled; these remain Under Review. Lecturers may upload only to courses assigned to them; their course materials are immediately Verified and receive a verification token. Other staff uploads remain Under Review. PDF, JPEG, PNG, and WebP files are validated by extension, MIME type, and file signature. The original filename is retained as the display filename.
+      description: Students may submit documents to any existing course when uploads are enabled; these remain Under Review. Lecturers may upload only to courses assigned to them; their course materials are immediately Verified and receive a verification token. Other staff uploads remain Under Review. PDF, JPEG, PNG, and WebP files are validated by extension and file contents, up to 10 MiB. Browser-provided MIME types are not required because mobile file pickers may report a generic type. The original filename is retained as the display filename.
       requestBody:
         required: true
         content:

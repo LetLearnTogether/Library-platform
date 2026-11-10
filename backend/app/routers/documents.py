@@ -1,11 +1,14 @@
 import uuid
 from datetime import datetime, timezone
+from io import BytesIO
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile, status
 from fastapi.responses import FileResponse
+import pymupdf
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
+from PIL import Image, UnidentifiedImageError
 
 from app.core.config import MAX_UPLOAD_SIZE_BYTES, PUBLIC_API_BASE_URL, UPLOAD_DIR
 from app.core.database import get_db
@@ -138,13 +141,27 @@ async def upload_document(
     if expected is None:
         raise HTTPException(status_code=415, detail="Only PDF, JPEG, PNG, and WebP documents are accepted.")
     expected_type, signature_check = expected
-    if file.content_type != expected_type:
-        raise HTTPException(status_code=415, detail="The file extension and MIME type do not match an allowed format.")
     contents = await file.read(MAX_UPLOAD_SIZE_BYTES + 1)
     if len(contents) > MAX_UPLOAD_SIZE_BYTES:
         raise HTTPException(status_code=413, detail="The uploaded file exceeds the configured size limit.")
     if not contents or not signature_check(contents):
         raise HTTPException(status_code=415, detail="The uploaded file content does not match its declared format.")
+    if expected_type == "application/pdf":
+        try:
+            with pymupdf.open(stream=contents, filetype="pdf") as pdf:
+                if pdf.page_count == 0 or pdf.needs_pass:
+                    raise HTTPException(
+                        status_code=415,
+                        detail="The PDF must contain readable pages and cannot be password-protected.",
+                    )
+        except pymupdf.FileDataError as error:
+            raise HTTPException(status_code=415, detail="The uploaded PDF could not be opened.") from error
+    else:
+        try:
+            with Image.open(BytesIO(contents)) as image:
+                image.verify()
+        except (UnidentifiedImageError, OSError) as error:
+            raise HTTPException(status_code=415, detail="The uploaded image could not be opened.") from error
     generated_name = f"{uuid.uuid4().hex}{extension}"
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     destination = UPLOAD_DIR / generated_name

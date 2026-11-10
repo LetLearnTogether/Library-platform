@@ -72,6 +72,7 @@ function LibraryPage({ portal = false }) {
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [documentActionError, setDocumentActionError] = useState('');
   const [courseError, setCourseError] = useState('');
   const [reportingDocument, setReportingDocument] = useState(null);
   const [reportedDocumentIds, setReportedDocumentIds] = useState(() => new Set());
@@ -187,20 +188,34 @@ function LibraryPage({ portal = false }) {
       navigate('/login', { state: { from: location } });
       return;
     }
-    const response = await downloadDocument(document.id, disposition);
-    const blob = await response.blob();
-    const objectUrl = URL.createObjectURL(blob);
-    if (disposition === 'inline') {
-      window.open(objectUrl, '_blank', 'noopener,noreferrer');
-    } else {
-      const link = window.document.createElement('a');
-      link.href = objectUrl;
-      link.download = document.filename || 'document';
-      window.document.body.appendChild(link);
-      link.click();
-      link.remove();
+    const previewWindow = disposition === 'inline'
+      ? window.open('about:blank', '_blank')
+      : null;
+    if (disposition === 'inline' && !previewWindow) {
+      setDocumentActionError('Allow pop-ups to preview this document.');
+      return;
     }
-    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+
+    setDocumentActionError('');
+    try {
+      const response = await downloadDocument(document.id, disposition);
+      const objectUrl = URL.createObjectURL(await response.blob());
+      if (previewWindow) {
+        previewWindow.opener = null;
+        previewWindow.location.href = objectUrl;
+      } else {
+        const link = window.document.createElement('a');
+        link.href = objectUrl;
+        link.download = document.filename || 'document';
+        window.document.body.appendChild(link);
+        link.click();
+        link.remove();
+      }
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+    } catch (requestError) {
+      previewWindow?.close();
+      setDocumentActionError(requestError.message || 'The document could not be opened.');
+    }
   }
 
   function handleView(document) {
@@ -275,6 +290,7 @@ function LibraryPage({ portal = false }) {
             </div>
           </div>
 
+          {documentActionError && <p className="app-status" role="alert">{documentActionError}</p>}
           {folderCourseCode && <CourseAnnouncements course={selectedCourseDetails} />}
 
           <div className="search-panel home-search-panel">

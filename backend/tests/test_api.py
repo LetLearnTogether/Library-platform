@@ -1,6 +1,24 @@
 from io import BytesIO
 
+import pymupdf
+from PIL import Image
+
 from conftest import login
+
+
+def create_test_pdf():
+    pdf = pymupdf.open()
+    pdf.new_page().insert_text((72, 72), "Test document")
+    contents = pdf.tobytes()
+    pdf.close()
+    return contents
+
+
+def create_test_png():
+    image = Image.new("RGB", (640, 800), "white")
+    output = BytesIO()
+    image.save(output, format="PNG")
+    return output.getvalue()
 
 
 def test_registration_login_and_error_envelope(api):
@@ -100,7 +118,7 @@ def test_platform_settings_enforce_registration_and_student_uploads(api):
         "/api/v1/documents",
         headers=login(api, "student@example.com"),
         data={"course_id": "1", "document_type": "Midterm"},
-        files={"file": ("paper.pdf", BytesIO(b"%PDF-1.7\nsample"), "application/pdf")},
+        files={"file": ("paper.pdf", BytesIO(create_test_pdf()), "application/pdf")},
     )
     assert upload.status_code == 403
     assert upload.json()["message"] == "Student document uploads are currently paused."
@@ -109,7 +127,7 @@ def test_platform_settings_enforce_registration_and_student_uploads(api):
         "/api/v1/documents",
         headers=login(api, "lecturer@example.com"),
         data={"course_id": "1", "document_type": "Midterm"},
-        files={"file": ("paper.pdf", BytesIO(b"%PDF-1.7\nsample"), "application/pdf")},
+        files={"file": ("paper.pdf", BytesIO(create_test_pdf()), "application/pdf")},
     )
     assert staff_upload.status_code == 201
     assert staff_upload.json()["status"] == "Verified"
@@ -130,7 +148,7 @@ def test_platform_settings_enforce_registration_and_student_uploads(api):
         "/api/v1/documents",
         headers=login(api, "student@example.com"),
         data={"course_id": "1", "document_type": "Midterm"},
-        files={"file": ("paper.pdf", BytesIO(b"%PDF-1.7\nsample"), "application/pdf")},
+        files={"file": ("paper.pdf", BytesIO(create_test_pdf()), "application/pdf")},
     )
     assert student_upload.status_code == 201
 
@@ -170,7 +188,7 @@ def test_admin_activity_log_tracks_privileged_changes(api):
         "/api/v1/documents",
         headers=login(api, "student@example.com"),
         data={"course_id": "1", "document_type": "Midterm"},
-        files={"file": ("paper.pdf", BytesIO(b"%PDF-1.7\nsample"), "application/pdf")},
+        files={"file": ("paper.pdf", BytesIO(create_test_pdf()), "application/pdf")},
     )
     assert upload.status_code == 201
     reviewed = api.put(
@@ -234,7 +252,7 @@ def test_documents_moderator_approval_verification_and_file(api):
         "/api/v1/documents",
         headers=student_headers,
         data={"course_id": "1", "document_type": "Midterm"},
-        files={"file": ("paper.pdf", BytesIO(b"%PDF-1.7\nsample"), "application/pdf")},
+        files={"file": ("paper.pdf", BytesIO(create_test_pdf()), "application/pdf")},
     )
     assert upload.status_code == 201, upload.text
     document = upload.json()
@@ -259,6 +277,16 @@ def test_documents_moderator_approval_verification_and_file(api):
     assert content.status_code == 200
     assert content.content.startswith(b"%PDF-")
     assert "inline" in content.headers["content-disposition"]
+    stamped_pdf = pymupdf.open(stream=content.content, filetype="pdf")
+    assert stamped_pdf[0].get_images(full=True)
+    stamped_pdf.close()
+    download = api.get(
+        f"/api/v1/documents/{document['id']}/content?disposition=attachment",
+        headers=student_headers,
+    )
+    assert download.status_code == 200
+    assert "attachment" in download.headers["content-disposition"]
+    assert download.content == content.content
 
     qr = api.get(f"/api/v1/verification/{verified['verification_token']}/qr")
     assert qr.status_code == 200
@@ -282,7 +310,7 @@ def test_moderator_can_remove_document_file(api):
         "/api/v1/documents",
         headers=student_headers,
         data={"course_id": "1", "document_type": "Assignment"},
-        files={"file": ("reported.pdf", BytesIO(b"%PDF-1.7\nreported"), "application/pdf")},
+        files={"file": ("reported.pdf", BytesIO(create_test_pdf()), "application/pdf")},
     )
     assert upload.status_code == 201, upload.text
     document_id = upload.json()["id"]
@@ -301,6 +329,29 @@ def test_moderator_can_remove_document_file(api):
     assert api.get(f"/api/v1/documents/{document_id}", headers=student_headers).status_code == 404
 
 
+def test_lecturer_phone_image_upload_is_verified_and_stamped(api):
+    lecturer_headers = login(api, "lecturer@example.com")
+    upload = api.post(
+        "/api/v1/documents",
+        headers=lecturer_headers,
+        data={"course_id": "1", "document_type": "Assignment"},
+        files={"file": ("phone-photo.png", BytesIO(create_test_png()), "application/octet-stream")},
+    )
+    assert upload.status_code == 201, upload.text
+    assert upload.json()["status"] == "Verified"
+
+    content = api.get(
+        f"/api/v1/documents/{upload.json()['id']}/content",
+        headers=lecturer_headers,
+    )
+    assert content.status_code == 200
+    assert content.content != create_test_png()
+    with Image.open(BytesIO(content.content)) as stamped_image:
+        assert stamped_image.size == (640, 800)
+        with Image.open(BytesIO(create_test_png())) as original_image:
+            assert stamped_image.convert("RGB").tobytes() != original_image.tobytes()
+
+
 def test_upload_validation_and_course_scoped_review(api):
     student_headers = login(api, "student@example.com")
     lecturer_headers = login(api, "lecturer@example.com")
@@ -315,11 +366,34 @@ def test_upload_validation_and_course_scoped_review(api):
     assert bad_upload.status_code == 415
     assert bad_upload.json()["error_code"] == "UNSUPPORTED_MEDIA_TYPE"
 
+    malformed_pdf = api.post(
+        "/api/v1/documents",
+        headers=student_headers,
+        data={"course_id": "1", "document_type": "Final"},
+        files={"file": ("malformed.pdf", BytesIO(b"%PDF-1.7\nnot a document"), "application/octet-stream")},
+    )
+    assert malformed_pdf.status_code == 415
+
+    android_upload = api.post(
+        "/api/v1/documents",
+        headers=student_headers,
+        data={"course_id": "1", "document_type": "Final"},
+        files={
+            "file": (
+                "phone-upload.pdf",
+                BytesIO(create_test_pdf() + b"\n%" + b"x" * (1024 * 1024 + 1)),
+                "application/octet-stream",
+            )
+        },
+    )
+    assert android_upload.status_code == 201, android_upload.text
+    assert android_upload.json()["status"] == "Under Review"
+
     upload = api.post(
         "/api/v1/documents",
         headers=student_headers,
         data={"course_id": "1", "document_type": "Final"},
-        files={"file": ("paper.pdf", BytesIO(b"%PDF-1.7\nsample"), "application/pdf")},
+        files={"file": ("paper.pdf", BytesIO(create_test_pdf()), "application/pdf")},
     )
     document_id = upload.json()["id"]
     denied = api.put(
@@ -358,7 +432,7 @@ def test_lecturer_uploads_only_to_assigned_courses_and_manages_own_materials(api
         "/api/v1/documents",
         headers=lecturer_headers,
         data={"course_id": str(other_course.json()["id"]), "document_type": "Syllabus"},
-        files={"file": ("biology.pdf", BytesIO(b"%PDF-1.7\nsample"), "application/pdf")},
+        files={"file": ("biology.pdf", BytesIO(create_test_pdf()), "application/pdf")},
     )
     assert denied_upload.status_code == 403
 
@@ -366,7 +440,7 @@ def test_lecturer_uploads_only_to_assigned_courses_and_manages_own_materials(api
         "/api/v1/documents",
         headers=lecturer_headers,
         data={"course_id": "1", "document_type": "Syllabus"},
-        files={"file": ("course-notes.pdf", BytesIO(b"%PDF-1.7\nnotes"), "application/pdf")},
+        files={"file": ("course-notes.pdf", BytesIO(create_test_pdf()), "application/pdf")},
     )
     assert material.status_code == 201, material.text
     assert material.json()["status"] == "Verified"
@@ -380,7 +454,7 @@ def test_lecturer_uploads_only_to_assigned_courses_and_manages_own_materials(api
         "/api/v1/documents",
         headers=student_headers,
         data={"course_id": "1", "document_type": "Assignment"},
-        files={"file": ("student-work.pdf", BytesIO(b"%PDF-1.7\nwork"), "application/pdf")},
+        files={"file": ("student-work.pdf", BytesIO(create_test_pdf()), "application/pdf")},
     )
     assert student_submission.status_code == 201
     assert student_submission.json()["status"] == "Under Review"
@@ -408,7 +482,7 @@ def test_review_queue_and_pending_file_are_role_scoped(api):
         "/api/v1/documents",
         headers=student_headers,
         data={"course_id": "1", "document_type": "Midterm"},
-        files={"file": ("pending.pdf", BytesIO(b"%PDF-1.7\nreview"), "application/pdf")},
+        files={"file": ("pending.pdf", BytesIO(create_test_pdf()), "application/pdf")},
     )
     document_id = upload.json()["id"]
     assert api.get("/api/v1/documents/review-queue", headers=student_headers).status_code == 403
@@ -813,7 +887,7 @@ def test_admin_can_delete_course_with_all_linked_content(api):
         "/api/v1/documents",
         headers=student_headers,
         data={"course_id": str(course_id), "document_type": "Assignment"},
-        files={"file": ("paper.pdf", BytesIO(b"%PDF-1.7\nsample"), "application/pdf")},
+        files={"file": ("paper.pdf", BytesIO(create_test_pdf()), "application/pdf")},
     )
     assert document.status_code == 201, document.text
     assert api.post(
@@ -925,7 +999,7 @@ def test_document_reports_and_quiz_management(api):
         "/api/v1/documents",
         headers=student_headers,
         data={"course_id": "1", "document_type": "Assignment"},
-        files={"file": ("assignment.pdf", BytesIO(b"%PDF-1.7\nsample"), "application/pdf")},
+        files={"file": ("assignment.pdf", BytesIO(create_test_pdf()), "application/pdf")},
     )
     document_id = upload.json()["id"]
     report = api.post(

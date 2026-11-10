@@ -3,14 +3,14 @@ from pathlib import Path
 
 import pymupdf
 import qrcode
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageOps
 
 from app.core.config import PUBLIC_FRONTEND_URL
 
 
 def create_verification_overlay(document_id: int, verification_token: str, approved_at=None) -> bytes:
     qr_image = qrcode.make(f"{PUBLIC_FRONTEND_URL}/verify/{verification_token}").convert("RGB")
-    qr_image = qr_image.resize((180, 180))
+    qr_image = qr_image.resize((190, 190))
 
     stamp = Image.new("RGBA", (330, 220), (255, 255, 255, 0))
     draw = ImageDraw.Draw(stamp)
@@ -46,10 +46,7 @@ def stamp_document(
 
 
 def stamp_pdf(file_path: Path, overlay: bytes) -> None:
-    try:
-        pdf = pymupdf.open(file_path)
-    except pymupdf.FileDataError:
-        return
+    pdf = pymupdf.open(file_path)
     if pdf.page_count == 0:
         pdf.close()
         return
@@ -58,7 +55,14 @@ def stamp_pdf(file_path: Path, overlay: bytes) -> None:
     stamp_width, stamp_height = overlay_image.width, overlay_image.height
     for page in pdf:
         page_rect = page.rect
-        scale = min(150 / stamp_width, 95 / stamp_height)
+        available_width = max(1, page_rect.width - 36)
+        available_height = max(1, page_rect.height - 36)
+        scale = min(
+            205 / stamp_width,
+            137 / stamp_height,
+            available_width / stamp_width,
+            available_height / stamp_height,
+        )
         width = stamp_width * scale
         height = stamp_height * scale
         rect = pymupdf.Rect(
@@ -77,14 +81,21 @@ def stamp_pdf(file_path: Path, overlay: bytes) -> None:
 
 def stamp_image(file_path: Path, content_type: str, overlay: bytes) -> None:
     with Image.open(file_path) as source:
-        document_image = source.convert("RGBA")
+        document_image = ImageOps.exif_transpose(source).convert("RGBA")
         stamp = Image.open(io.BytesIO(overlay)).convert("RGBA")
-        stamp_width = max(1, min(max(180, int(document_image.width * 0.34)), document_image.width - 24))
-        stamp_height = int(stamp.height * stamp_width / stamp.width)
+        available_width = max(1, document_image.width - 24)
+        available_height = max(1, document_image.height - 24)
+        target_width = min(max(180, int(document_image.width * 0.34)), available_width)
+        scale = min(target_width / stamp.width, available_height / stamp.height)
+        stamp_width = max(1, int(stamp.width * scale))
+        stamp_height = max(1, int(stamp.height * scale))
         stamp = stamp.resize((stamp_width, stamp_height), Image.Resampling.LANCZOS)
         document_image.alpha_composite(
             stamp,
-            (document_image.width - stamp_width - 12, document_image.height - stamp_height - 12),
+            (
+                max(0, document_image.width - stamp_width - 12),
+                max(0, document_image.height - stamp_height - 12),
+            ),
         )
 
         temporary_path = file_path.with_name(f"{file_path.stem}.stamp.tmp{file_path.suffix}")

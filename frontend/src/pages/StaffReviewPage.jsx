@@ -196,7 +196,7 @@ export default function StaffReviewPage() {
     }
   }
 
-  async function openReviewFile(documentId) {
+  async function openReviewFile(documentId, contentPath = 'review-content') {
     const previewWindow = window.open('about:blank', '_blank');
     if (!previewWindow) {
       setError('Allow pop-ups to preview a submitted file.');
@@ -206,7 +206,7 @@ export default function StaffReviewPage() {
     setWorkingId(`preview-${documentId}`);
     setError('');
     try {
-      const response = await apiRequest(`/documents/${documentId}/review-content`);
+      const response = await apiRequest(`/documents/${documentId}/${contentPath}`);
       const objectUrl = URL.createObjectURL(await response.blob());
       previewWindow.location.href = objectUrl;
       window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
@@ -358,7 +358,7 @@ export default function StaffReviewPage() {
                 <p>Submitted {new Date(report.created_at).toLocaleString()}</p>
                 {removedDocumentIds.has(report.document_id)
                   ? <span>Document file removed</span>
-                  : <a href={`/api/v1/documents/${report.document_id}/content?disposition=inline`} target="_blank" rel="noreferrer">Open verified document</a>}
+                  : <button type="button" className="staff-file-link" onClick={() => openReviewFile(report.document_id, 'content?disposition=inline')}>Open verified document</button>}
                 <label className="staff-review-note">
                   Moderator note
                   <textarea

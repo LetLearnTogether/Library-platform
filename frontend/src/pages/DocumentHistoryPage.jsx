@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
-import { apiRequest, getDocumentContentUrl, getVerificationUrl } from '../lib/api';
+import { apiRequest, downloadDocument, getVerificationUrl } from '../lib/api';
 import './DocumentHistoryPage.css';
 
 const PAGE_SIZE = 20;
@@ -17,6 +17,7 @@ export function DocumentSubmissionsPanel({ embedded = false }) {
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [viewError, setViewError] = useState('');
   const [workingId, setWorkingId] = useState(null);
   const [message, setMessage] = useState('');
 
@@ -61,6 +62,25 @@ export function DocumentSubmissionsPanel({ embedded = false }) {
     setPage(1);
   }
 
+  async function viewDocument(document) {
+    const previewWindow = window.open('about:blank', '_blank');
+    if (!previewWindow) {
+      setViewError('Allow pop-ups to preview this document.');
+      return;
+    }
+    setViewError('');
+    try {
+      const response = await downloadDocument(document.id);
+      const objectUrl = URL.createObjectURL(await response.blob());
+      previewWindow.opener = null;
+      previewWindow.location.href = objectUrl;
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+    } catch (requestError) {
+      previewWindow.close();
+      setViewError(requestError.message || 'The document could not be opened.');
+    }
+  }
+
   async function removeMaterial(document) {
     if (!window.confirm(`Remove "${document.filename}" from the public library?`)) return;
     setWorkingId(document.id);
@@ -98,6 +118,7 @@ export function DocumentSubmissionsPanel({ embedded = false }) {
         </div>
 
         {error && <p className="app-status" role="alert">{error}</p>}
+        {viewError && <p className="app-status" role="alert">{viewError}</p>}
         {message && <p className="app-status" role="status">{message}</p>}
         {loading ? (
           <p className="app-status" role="status">Loading your submissions…</p>
@@ -124,7 +145,7 @@ export function DocumentSubmissionsPanel({ embedded = false }) {
                       <span className={`document-history-status status-${normalizedStatus}`}>{document.status}</span>
                       {document.status === 'Verified' && (
                         <>
-                          <a href={getDocumentContentUrl(document.id)} target="_blank" rel="noreferrer">View document</a>
+                          <button type="button" className="document-history-button" onClick={() => void viewDocument(document)}>View document</button>
                           {document.verification_token && (
                             <Link to={getVerificationUrl(document.verification_token)}>Verify stamp</Link>
                           )}
