@@ -1,6 +1,6 @@
 # Production Deployment Runbook
 
-This runbook targets Ubuntu on a DigitalOcean VPS, Docker Compose, MySQL 8.4, persistent Docker volumes for uploads, Caddy for origin HTTPS, and Cloudflare DNS/proxy. Do not paste credentials into source control, chat, or issue comments.
+This runbook targets a standalone Ubuntu deployment using Caddy for origin HTTPS and Cloudflare DNS/proxy. Do not use its Caddy listener on a shared VPS that already runs host Nginx. On a shared VPS, keep project files and data under `/opt`, publish only the project Nginx container to the host Nginx, and use [project-nginx.conf](../deploy/project-nginx.conf) to route into this project's Compose network. Do not paste credentials into source control, chat, or issue comments.
 
 The configuration is a deployable foundation, not a production deployment by itself. A project owner must provision the VPS, domain, DNS, secrets, backups, and monitoring, and verify the release in that environment.
 
