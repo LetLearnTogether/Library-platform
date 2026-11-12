@@ -10,6 +10,7 @@ from app.models.entities import (
     QuizAttemptAnswer,
     QuizQuestion,
     Report,
+    StudentVerification,
     User,
 )
 
@@ -25,5 +26,6 @@ __all__ = [
     "QuizAttemptAnswer",
     "QuizQuestion",
     "Report",
+    "StudentVerification",
     "User",
 ]

@@ -1,0 +1,161 @@
+.student-verification-filter {
+  display: grid;
+  gap: 8px;
+  min-width: 190px;
+  color: #334155;
+  font-weight: 600;
+}
+
+.student-verification-filter select,
+.student-verification-review-actions textarea {
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #0f172a;
+  font: inherit;
+}
+
+.student-verification-empty,
+.student-verification-review-card {
+  margin-top: 20px;
+  padding: 22px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.student-verification-empty h2 {
+  margin: 0 0 8px;
+}
+
+.student-verification-review-card > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.student-verification-review-card > header h2 {
+  margin: 10px 0 4px;
+}
+
+.student-verification-review-card > header p,
+.student-verification-review-card > header time {
+  color: #64748b;
+}
+
+.student-verification-status {
+  display: inline-flex;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #fff7ed;
+  color: #c2410c;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.student-verification-status-approved {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.student-verification-status-rejected {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.student-verification-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 24px;
+  margin: 20px 0;
+}
+
+.student-verification-details > div {
+  min-width: 0;
+}
+
+.student-verification-details dt {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.student-verification-details dd {
+  margin: 4px 0 0;
+  color: #0f172a;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.student-verification-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.student-verification-images > div {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.student-verification-images img {
+  width: min(100%, 420px);
+  max-height: 320px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+.student-verification-review-actions {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto;
+  align-items: end;
+  gap: 16px;
+  margin-top: 22px;
+}
+
+.student-verification-review-actions label {
+  display: grid;
+  gap: 8px;
+  color: #334155;
+  font-weight: 600;
+}
+
+.student-verification-review-actions textarea {
+  min-height: 76px;
+  resize: vertical;
+}
+
+.student-verification-review-actions > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.student-verification-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin: 24px 0;
+  color: #475569;
+  font-weight: 600;
+}
+
+@media (max-width: 700px) {
+  .student-verification-review-card > header,
+  .student-verification-review-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .student-verification-review-card > header {
+    display: grid;
+  }
+
+  .student-verification-details {
+    grid-template-columns: 1fr;
+  }
+}

@@ -65,7 +65,8 @@ export function AuthProvider({ children }) {
       method: 'POST',
       body: { name, email, password },
     });
-    return login(email, password);
+    const currentUser = await login(email, password);
+    return currentUser;
   }, [login]);
 
   const value = useMemo(

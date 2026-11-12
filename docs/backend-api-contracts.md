@@ -15,7 +15,7 @@ The requirements source is the [PRD](../LetLearnTogether_PRD_v3.md) and [SRS](..
 - Errors use `{ "error_code": "...", "message": "...", "request_id": "..." }`.
 - Protected operations use `Authorization: Bearer <JWT>`. Public operations explicitly disable bearer authentication in the OpenAPI contract.
 - Passwords are bcrypt-hashed. Because bcrypt accepts at most 72 UTF-8 bytes, inputs beyond that limit are rejected.
-- Uploads are restricted to PDF, JPEG, PNG, and WebP, with both extension and content validation. The current default maximum size is 1 MiB.
+- Course document uploads are restricted to PDF, JPEG, PNG, and WebP, with both extension and content validation. The current default maximum size is 1 MiB; student ID images may be up to 5 MiB each.
 - Quiz read responses never expose correct-answer indexes. The server calculates submitted scores from stored answer keys.
 
 ## Endpoint groups
@@ -26,6 +26,7 @@ The requirements source is the [PRD](../LetLearnTogether_PRD_v3.md) and [SRS](..
 | Users | `/users`, `/users/{user_id}` | Admin only. |
 | Courses | `/courses`, `/courses/{course_id}` | Reads public; create/update/delete Admin only. |
 | Documents | `/documents`, `/documents/mine`, `/documents/{document_id}`, `/documents/{document_id}/content`, review, revoke | Verified library reads public; upload authenticated; review by assigned Lecturer, Moderator, or Admin; revocation/removal by Moderator or Admin. |
+| Student verification | `/student-verifications`, `/student-verifications/mine`, `/student-verifications/review-queue`, image and review routes | Students submit their own ID details/images; Admins only can view submissions/images and approve or reject. Student portal access begins after submission. |
 | Verification | `/verification/{token}`, `/verification/{token}/qr` | Public. |
 | Reports | document report submission, `/reports`, `/reports/{report_id}` | Submission authenticated; report management Moderator or Admin. |
 | Quizzes | `/quizzes`, `/quizzes/{quiz_id}` | Published quiz reads public; authoring by assigned Lecturer or Admin. |

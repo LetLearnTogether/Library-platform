@@ -80,11 +80,17 @@ export default function RegisterPage() {
 
     setSubmitting(true);
     try {
-      await register({
+      const registeredUser = await register({
         name: form.fullName.trim(),
         email: form.email.trim(),
         password: form.password,
       });
+
+      if (registeredUser?.role === 'Student') {
+        navigate('/student-dashboard', { replace: true });
+        return;
+      }
+
       navigate('/', { replace: true });
     } catch (error) {
       setMessage(error.message || 'Unable to create your account. Please try again.');

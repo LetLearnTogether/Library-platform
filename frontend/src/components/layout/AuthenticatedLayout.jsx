@@ -24,6 +24,7 @@ function AuthenticatedLayout({ children }) {
       { to: '/admin/courses', label: 'Courses', icon: '▤' },
       { to: '/admin/settings', label: 'System settings', icon: '⚙' },
       { to: '/admin/activity', label: 'Activity log', icon: '◷' },
+      { to: '/admin/student-verifications', label: 'Student verifications', icon: '✓' },
       { to: '/quiz-management', label: 'Quiz management', icon: '✎' },
       { to: '/staff', label: 'Review & reports', icon: '✓' },
       { to: '/library', label: 'Document library', icon: '▤' },
@@ -50,6 +51,7 @@ function AuthenticatedLayout({ children }) {
       ]
       : [
         { to: '/student-dashboard', label: 'Overview', icon: '▦', end: true },
+        { to: '/student/verification', label: 'University verification', icon: '✓' },
         { to: '/library', label: 'Document library', icon: '▤' },
         { to: '/quizzes', label: 'Quizzes', icon: '✎' },
         { to: '/quiz-history', label: 'Quiz history', icon: '◷' },
@@ -143,6 +145,7 @@ function AuthenticatedLayout({ children }) {
         <nav className="portal-mobile-nav" aria-label="Student navigation">
           {[
             { to: '/library', label: 'Library', icon: '▤', active: location.pathname === '/library' || location.pathname.startsWith('/courses/') },
+            { to: '/student/verification', label: 'Verify', icon: '✓', active: location.pathname === '/student/verification' },
             { to: '/quizzes', label: 'Quizzes', icon: '✎' },
             { to: '/upload', label: 'Upload', icon: '↑', active: location.pathname === '/upload' || location.pathname === '/document-history' },
             { to: '/student-dashboard', label: 'Me', icon: '♙', end: true },

@@ -26,6 +26,13 @@ const managementAreas = [
     action: 'Manage courses',
   },
   {
+    to: '/admin/student-verifications',
+    icon: '✓',
+    label: 'Student verification',
+    description: 'Review student ID submissions and confirm college and department details.',
+    action: 'Review student IDs',
+  },
+  {
     to: '/staff',
     icon: '✓',
     label: 'Document review & reports',
@@ -64,7 +71,7 @@ const roleResponsibilities = [
   },
 ];
 
-const initialOverview = { accounts: null, courses: null, reviews: null, reports: null };
+const initialOverview = { accounts: null, courses: null, reviews: null, reports: null, studentVerifications: null };
 
 export default function AdminDashboard() {
   const [overview, setOverview] = useState(initialOverview);
@@ -80,15 +87,17 @@ export default function AdminDashboard() {
       apiRequest('/courses?page=1&page_size=1'),
       apiRequest('/documents/review-queue?page=1&page_size=1'),
       apiRequest('/reports?page=1&page_size=1&status=Open'),
+      apiRequest('/student-verifications/review-queue?page=1&page_size=1&status=Pending'),
       apiRequest('/activity/analytics/documents'),
     ])
-      .then(([accounts, courses, reviews, reports, documentAnalytics]) => {
+      .then(([accounts, courses, reviews, reports, studentVerifications, documentAnalytics]) => {
         if (!active) return;
         setOverview({
           accounts: accounts.total_items,
           courses: courses.total_items,
           reviews: reviews.total_items,
           reports: reports.total_items,
+          studentVerifications: studentVerifications.total_items,
         });
         setAnalytics(documentAnalytics);
       })
@@ -113,6 +122,7 @@ export default function AdminDashboard() {
     { label: 'Courses', value: overview.courses, icon: '▤' },
     { label: 'Awaiting review', value: overview.reviews, icon: '◷', to: '/staff' },
     { label: 'Open reports', value: overview.reports, icon: '⚑', to: '/staff' },
+    { label: 'Student IDs awaiting review', value: overview.studentVerifications, icon: '✓', to: '/admin/student-verifications' },
   ];
 
   return (

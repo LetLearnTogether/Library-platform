@@ -102,6 +102,29 @@ CREATE TABLE IF NOT EXISTS Documents (
     FOREIGN KEY (reviewed_by) REFERENCES Users(id)
 );
 
+CREATE TABLE IF NOT EXISTS Student_Verifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL UNIQUE,
+    full_name VARCHAR(100) NOT NULL,
+    student_number VARCHAR(100) NOT NULL,
+    university VARCHAR(150) NOT NULL,
+    college VARCHAR(255) NOT NULL,
+    department VARCHAR(255) NOT NULL,
+    academic_year VARCHAR(20) NOT NULL,
+    front_image_path VARCHAR(500) NOT NULL,
+    front_image_content_type VARCHAR(50) NOT NULL,
+    back_image_path VARCHAR(500),
+    back_image_content_type VARCHAR(50),
+    status ENUM('Pending', 'Approved', 'Rejected') NOT NULL DEFAULT 'Pending',
+    review_note TEXT,
+    reviewed_by INT,
+    submitted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    reviewed_at TIMESTAMP NULL,
+    FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE,
+    FOREIGN KEY (reviewed_by) REFERENCES Users(id),
+    INDEX ix_student_verifications_status (status)
+);
+
 CREATE TABLE IF NOT EXISTS Reports (
     id INT AUTO_INCREMENT PRIMARY KEY,
     document_id INT NOT NULL,

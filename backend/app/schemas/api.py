@@ -80,6 +80,85 @@ class UserResponse(APIModel):
     created_at: datetime
 
 
+class StudentVerificationCreate(APIModel):
+    full_name: str = Field(min_length=1, max_length=100)
+    student_number: str = Field(min_length=1, max_length=100)
+    university: Literal["Williams V. S. Tubman University"]
+    college: str = Field(min_length=1, max_length=255)
+    department: str = Field(min_length=1, max_length=255)
+    academic_year: str = Field(min_length=1, max_length=20)
+
+    @field_validator("full_name", "student_number", "college", "department", "academic_year")
+    @classmethod
+    def strip_required_text(cls, value: str):
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("This field cannot be blank.")
+        return normalized
+
+    @model_validator(mode="after")
+    def department_belongs_to_college(self):
+        college_departments = {
+            "College of Agriculture & Food Science": {"General Agriculture", "Agronomy"},
+            "College of Business Administration": {
+                "Accounting", "Banking & Finance", "Business Administration", "Economics", "Public Administration",
+            },
+            "College of Health Sciences": {"Public Health", "Nursing and Midwifery"},
+            "College of Arts & Sciences": {"Environmental Studies", "Biology", "Psychology"},
+            "College of Engineering & Technology": {
+                "Civil Engineering", "Computer Science", "Electrical Engineering", "Mechanical Engineering",
+            },
+            "Dr. Elizabeth Davis-Russell College of Education (EDRCE)": {
+                "Early Childhood Education Development",
+                "Primary Education",
+                "Secondary Education - Biology",
+                "Secondary Education - Chemistry",
+                "Secondary Education - English and Literature",
+                "Secondary Education - History",
+                "Secondary Education - Mathematics",
+                "Guidance and Counseling",
+            },
+        }
+        if self.department not in college_departments.get(self.college, set()):
+            raise ValueError("The selected department does not belong to the selected college.")
+        return self
+
+
+class StudentVerificationReviewRequest(APIModel):
+    action: Literal["approve", "reject"]
+    review_note: str | None = Field(default=None, max_length=1000)
+
+    @field_validator("review_note")
+    @classmethod
+    def normalize_review_note(cls, value: str | None):
+        return value.strip() if value and value.strip() else None
+
+
+class StudentVerificationResponse(APIModel):
+    id: int
+    student_id: int
+    student_name: str
+    student_email: EmailStr
+    full_name: str
+    student_number: str
+    university: str
+    college: str
+    department: str
+    academic_year: str
+    status: Literal["Pending", "Approved", "Rejected"]
+    review_note: str | None
+    front_image_url: str
+    back_image_url: str | None
+    submitted_at: datetime
+    reviewer_name: str | None
+    reviewed_at: datetime | None
+
+
+class StudentVerificationMineResponse(APIModel):
+    submitted: bool
+    submission: StudentVerificationResponse | None
+
+
 class PublicSettingsResponse(APIModel):
     announcement_enabled: bool
     announcement_message: str | None

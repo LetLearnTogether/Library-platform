@@ -19,6 +19,7 @@ tags:
   - name: Course announcements
   - name: Course enrollments
   - name: Documents
+  - name: Student verification
   - name: Verification
   - name: Reports
   - name: Quizzes
@@ -965,6 +966,211 @@ paths:
         default:
           $ref: '#/components/responses/Error'
 
+  /student-verifications/mine:
+    get:
+      tags: [Student verification]
+      summary: Read the current student's verification submission
+      description: Student only. `submitted` is false when a submission is required. Student platform access is unlocked after a successful submission, while Admin review may still be pending.
+      responses:
+        '200':
+          description: Current student's submission state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentVerificationMine'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /student-verifications:
+    post:
+      tags: [Student verification]
+      summary: Submit student ID verification
+      description: Student only. Saves the application for Admin review. Front image is required; back image is optional. Images must be JPG, PNG, or WebP and no larger than 5 MiB each. College and department selections are validated by the API.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [full_name, student_number, university, college, department, academic_year, front_image]
+              properties:
+                full_name:
+                  type: string
+                  maxLength: 100
+                student_number:
+                  type: string
+                  maxLength: 100
+                university:
+                  type: string
+                  enum: [Williams V. S. Tubman University]
+                college:
+                  type: string
+                  maxLength: 255
+                department:
+                  type: string
+                  maxLength: 255
+                academic_year:
+                  type: string
+                  maxLength: 20
+                front_image:
+                  type: string
+                  format: binary
+                back_image:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Submission saved and awaiting Admin review
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentVerification'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /student-verifications/review-queue:
+    get:
+      tags: [Student verification]
+      summary: List student verification submissions
+      description: Admin only.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [Pending, Approved, Rejected]
+      responses:
+        '200':
+          description: Paginated student verification submissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentVerificationPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /student-verifications/{student_verification_id}/front-image:
+    parameters:
+      - $ref: '#/components/parameters/StudentVerificationId'
+    get:
+      tags: [Student verification]
+      summary: View the front of a submitted student ID
+      description: Admin only. Returns a protected image response.
+      responses:
+        '200':
+          description: Student ID image
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /student-verifications/{student_verification_id}/back-image:
+    parameters:
+      - $ref: '#/components/parameters/StudentVerificationId'
+    get:
+      tags: [Student verification]
+      summary: View the back of a submitted student ID
+      description: Admin only. Returns a protected image response when a back image was submitted.
+      responses:
+        '200':
+          description: Student ID image
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /student-verifications/{student_verification_id}/review:
+    parameters:
+      - $ref: '#/components/parameters/StudentVerificationId'
+    put:
+      tags: [Student verification]
+      summary: Approve or reject a student verification submission
+      description: Admin only. Only pending submissions can be reviewed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentVerificationReviewRequest'
+      responses:
+        '200':
+          description: Submission reviewed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentVerification'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        default:
+          $ref: '#/components/responses/Error'
+
   /verification/{token}:
     get:
       tags: [Verification]
@@ -1438,6 +1644,13 @@ components:
       schema:
         type: integer
         minimum: 1
+    StudentVerificationId:
+      name: student_verification_id
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
     ReportId:
       name: report_id
       in: path
@@ -1539,6 +1752,10 @@ components:
     DocumentStatus:
       type: string
       enum: [Under Review, Verified, Rejected, Revoked]
+
+    StudentVerificationStatus:
+      type: string
+      enum: [Pending, Approved, Rejected]
 
     ReportStatus:
       type: string
@@ -1988,6 +2205,77 @@ components:
         review_note:
           type: string
           maxLength: 1000
+
+    StudentVerification:
+      type: object
+      required: [id, student_id, student_name, student_email, full_name, student_number, university, college, department, academic_year, status, review_note, front_image_url, back_image_url, submitted_at, reviewer_name, reviewed_at]
+      properties:
+        id:
+          type: integer
+        student_id:
+          type: integer
+        student_name:
+          type: string
+        student_email:
+          type: string
+          format: email
+        full_name:
+          type: string
+        student_number:
+          type: string
+        university:
+          type: string
+          enum: [Williams V. S. Tubman University]
+        college:
+          type: string
+        department:
+          type: string
+        academic_year:
+          type: string
+        status:
+          $ref: '#/components/schemas/StudentVerificationStatus'
+        review_note:
+          type: string
+          nullable: true
+        front_image_url:
+          type: string
+        back_image_url:
+          type: string
+          nullable: true
+        submitted_at:
+          type: string
+          format: date-time
+        reviewer_name:
+          type: string
+          nullable: true
+        reviewed_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    StudentVerificationMine:
+      type: object
+      required: [submitted, submission]
+      properties:
+        submitted:
+          type: boolean
+        submission:
+          allOf:
+            - $ref: '#/components/schemas/StudentVerification'
+          nullable: true
+
+    StudentVerificationReviewRequest:
+      type: object
+      additionalProperties: false
+      required: [action]
+      properties:
+        action:
+          type: string
+          enum: [approve, reject]
+        review_note:
+          type: string
+          maxLength: 1000
+          nullable: true
 
     Verification:
       type: object
@@ -2448,6 +2736,17 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/Document'
+
+    StudentVerificationPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/StudentVerification'
 
     ReportPage:
       allOf:

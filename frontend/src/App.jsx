@@ -16,6 +16,7 @@ import CourseAnnouncements from './components/CourseAnnouncements.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import RegisterPage from './pages/RegisterPage.jsx';
 import StudentDashboard from './pages/StudentDashboard.jsx';
+import UniversityVerificationPage from './pages/UniversityVerificationPage.jsx';
 import QuizPage from './pages/QuizPage.jsx';
 import QuizHistoryPage from './pages/QuizHistoryPage.jsx';
 import DocumentHistoryPage from './pages/DocumentHistoryPage.jsx';
@@ -30,6 +31,7 @@ import AdminAccountsPage from './pages/AdminAccountsPage.jsx';
 import AdminCoursesPage from './pages/AdminCoursesPage.jsx';
 import AdminSettingsPage from './pages/AdminSettingsPage.jsx';
 import AdminActivityPage from './pages/AdminActivityPage.jsx';
+import AdminStudentVerificationsPage from './pages/AdminStudentVerificationsPage.jsx';
 import LecturerDashboard from './pages/LecturerDashboard.jsx';
 import StudentCoursesPage from './pages/StudentCoursesPage.jsx';
 import CourseRosterPage from './pages/CourseRosterPage.jsx';
@@ -554,6 +556,44 @@ function roleHome(role) {
 function AppContent() {
   const { user, loading } = useAuth();
   const { loading: settingsLoading, error: settingsError, retry } = usePlatformSettings();
+  const location = useLocation();
+  const [verificationState, setVerificationState] = useState({ userId: null, submission: null, error: '' });
+  const [verificationRetry, setVerificationRetry] = useState(0);
+  const currentUserId = user?.id;
+  const currentUserRole = user?.role;
+
+  useEffect(() => {
+    if (!currentUserId || currentUserRole !== 'Student') return undefined;
+
+    let active = true;
+    apiRequest('/student-verifications/mine')
+      .then((result) => {
+        if (active) setVerificationState({ userId: currentUserId, submission: result.submission, error: '' });
+      })
+      .catch((requestError) => {
+        if (active) {
+          setVerificationState({
+            userId: currentUserId,
+            submission: null,
+            error: requestError.message || 'Student verification status could not be loaded.',
+          });
+        }
+      });
+    return () => { active = false; };
+  }, [currentUserId, currentUserRole, verificationRetry]);
+
+  const verificationLoading = currentUserRole === 'Student' && verificationState.userId !== currentUserId;
+  const verificationSubmission = verificationState.userId === currentUserId ? verificationState.submission : null;
+  const verificationError = verificationState.userId === currentUserId ? verificationState.error : '';
+
+  function retryVerificationStatus() {
+    setVerificationState({ userId: null, submission: null, error: '' });
+    setVerificationRetry((current) => current + 1);
+  }
+
+  function handleVerificationSubmitted(submission) {
+    setVerificationState({ userId: currentUserId, submission, error: '' });
+  }
 
   if (loading) {
     return <p className="app-status" role="status">Restoring your session…</p>;
@@ -573,6 +613,25 @@ function AppContent() {
   }
 
   if (user) {
+    if (user.role === 'Student' && verificationLoading) {
+      return <p className="app-status" role="status">Checking your student verification…</p>;
+    }
+
+    if (user.role === 'Student' && verificationError) {
+      return (
+        <main className="app-status app-status-error" role="alert">
+          <p>{verificationError}</p>
+          <button type="button" className="secondary-button" onClick={retryVerificationStatus}>
+            Retry
+          </button>
+        </main>
+      );
+    }
+
+    if (user.role === 'Student' && !verificationSubmission && location.pathname !== '/student/verification') {
+      return <Navigate to="/student/verification" replace />;
+    }
+
     return (
       <>
         <PlatformNotice />
@@ -590,6 +649,7 @@ function AppContent() {
             <Route path="/courses/:courseCode/:year" element={<LibraryPage portal />} />
             <Route path="/courses/:courseCode" element={<LibraryPage portal />} />
             <Route path="/student-dashboard" element={<RequireAuth roles={['Student']}><StudentDashboard /></RequireAuth>} />
+            <Route path="/student/verification" element={<RequireAuth roles={['Student']}><UniversityVerificationPage submission={verificationSubmission} onSubmitted={handleVerificationSubmitted} /></RequireAuth>} />
             <Route path="/student/courses" element={<RequireAuth roles={['Student']}><StudentCoursesPage /></RequireAuth>} />
             <Route path="/lecturer/courses/:courseId/students" element={<RequireAuth roles={['Lecturer']}><CourseRosterPage /></RequireAuth>} />
             <Route path="/quiz-history" element={<RequireAuth roles={['Student']}><QuizHistoryPage /></RequireAuth>} />
@@ -603,6 +663,7 @@ function AppContent() {
             <Route path="/admin/courses" element={<RequireAuth roles={['Admin']}><AdminCoursesPage /></RequireAuth>} />
             <Route path="/admin/settings" element={<RequireAuth roles={['Admin']}><AdminSettingsPage /></RequireAuth>} />
             <Route path="/admin/activity" element={<RequireAuth roles={['Admin']}><AdminActivityPage /></RequireAuth>} />
+            <Route path="/admin/student-verifications" element={<RequireAuth roles={['Admin']}><AdminStudentVerificationsPage /></RequireAuth>} />
             <Route path="/lecturer" element={<RequireAuth roles={['Lecturer']}><LecturerDashboard /></RequireAuth>} />
             <Route path="/staff" element={<RequireAuth roles={['Lecturer', 'Moderator', 'Admin']}><StaffReviewPage /></RequireAuth>} />
             <Route path="/quizzes" element={<QuizPage />} />
@@ -633,6 +694,7 @@ function AppContent() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/student-dashboard" element={<RequireAuth roles={['Student']}><StudentDashboard /></RequireAuth>} />
+        <Route path="/student/verification" element={<RequireAuth roles={['Student']}><UniversityVerificationPage submission={verificationSubmission} onSubmitted={handleVerificationSubmitted} /></RequireAuth>} />
         <Route path="/student/courses" element={<RequireAuth roles={['Student']}><StudentCoursesPage /></RequireAuth>} />
         <Route path="/lecturer/courses/:courseId/students" element={<RequireAuth roles={['Lecturer']}><CourseRosterPage /></RequireAuth>} />
         <Route path="/quiz-history" element={<RequireAuth roles={['Student']}><QuizHistoryPage /></RequireAuth>} />
@@ -644,6 +706,7 @@ function AppContent() {
         <Route path="/admin/courses" element={<RequireAuth roles={['Admin']}><AdminCoursesPage /></RequireAuth>} />
         <Route path="/admin/settings" element={<RequireAuth roles={['Admin']}><AdminSettingsPage /></RequireAuth>} />
         <Route path="/admin/activity" element={<RequireAuth roles={['Admin']}><AdminActivityPage /></RequireAuth>} />
+        <Route path="/admin/student-verifications" element={<RequireAuth roles={['Admin']}><AdminStudentVerificationsPage /></RequireAuth>} />
         <Route path="/lecturer" element={<RequireAuth roles={['Lecturer']}><LecturerDashboard /></RequireAuth>} />
         <Route path="/staff" element={<RequireAuth roles={['Lecturer', 'Moderator', 'Admin']}><StaffReviewPage /></RequireAuth>} />
         <Route path="/quizzes" element={<QuizPage />} />

@@ -7,7 +7,7 @@
 ## 📖 Project Overview
 **LetLearnTogether** is a mobile-first, phone-friendly web platform where students can find, read, download, and verify past examination papers, and practice multiple-choice quizzes. It replaces scattered, unverified chat files with a trusted, searchable, and moderated archive.
 
-Administrators can use the `/admin` overview, with separate `/admin/accounts` and `/admin/courses` pages. Each management page has Create and View tabs for adding records and managing existing accounts, roles, courses, and lecturer assignments. Document review and report moderation are available in the separate `/staff` workspace.
+Administrators can use the `/admin` overview, with separate `/admin/accounts`, `/admin/courses`, and `/admin/student-verifications` pages. Student ID verification submissions are saved for Admin review; students are routed to complete verification before using the learning portal, and regain access after submitting. Document review and report moderation are available in the separate `/staff` workspace.
 Signed-in users use a dedicated workspace header and role-based sidebar. Public landing, login, and registration pages are only shown while signed out; signed-in users can open the document library inside their portal without the public landing page.
 
 **Live Site:** [https://your-domain.com](https://your-domain.com) *(Update this when deployed)*  
@@ -91,7 +91,7 @@ alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
-On first startup, SQLAlchemy creates missing tables in the configured database. The MySQL schema reference is in [docs/schema.sql](docs/schema.sql). For a stable deployment, set `SECRET_KEY`, `DATABASE_URL` (or the `DB_*` values), `PUBLIC_API_BASE_URL`, `PUBLIC_FRONTEND_URL`, `CORS_ORIGINS`, and `UPLOAD_DIR` in `backend/.env`. Uploaded files are limited to 1 MiB by default and stored in `backend/uploads/`.
+On first startup, SQLAlchemy creates missing tables in the configured database. The MySQL schema reference is in [docs/schema.sql](docs/schema.sql). For a stable deployment, set `SECRET_KEY`, `DATABASE_URL` (or the `DB_*` values), `PUBLIC_API_BASE_URL`, `PUBLIC_FRONTEND_URL`, `CORS_ORIGINS`, and `UPLOAD_DIR` in `backend/.env`. Course document uploads are limited to 1 MiB by default; student ID images may be up to 5 MiB each. Both are stored under the configured upload directory.
 
 Apply the database migration with `alembic upgrade head` from `backend/` before running the API locally. Migrations do not automatically change an existing production schema; coordinate all schema updates with the database team.
 
