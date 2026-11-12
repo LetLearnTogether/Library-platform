@@ -5,12 +5,22 @@ import { apiRequest } from '../lib/api.js';
 import './LecturerDashboard.css';
 
 const initialOverview = { courses: [], reviews: null, quizzes: null, performance: null };
+const initialCourseForm = {
+  course_code: '',
+  course_title: '',
+  year: new Date().getFullYear(),
+  semester: 'First',
+};
 
 export default function LecturerDashboard() {
   const { user } = useAuth();
   const [overview, setOverview] = useState(initialOverview);
+  const [courseForm, setCourseForm] = useState(initialCourseForm);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [courseFormError, setCourseFormError] = useState('');
+  const [courseFormMessage, setCourseFormMessage] = useState('');
+  const [creatingCourse, setCreatingCourse] = useState(false);
   const [retry, setRetry] = useState(0);
 
   useEffect(() => {
@@ -46,6 +56,27 @@ export default function LecturerDashboard() {
     setError('');
     setRetry((current) => current + 1);
   }, []);
+
+  async function createCourse(event) {
+    event.preventDefault();
+    setCreatingCourse(true);
+    setCourseFormError('');
+    setCourseFormMessage('');
+    try {
+      await apiRequest('/courses', {
+        method: 'POST',
+        body: { ...courseForm, year: Number(courseForm.year) },
+      });
+      setCourseForm({ ...initialCourseForm, year: new Date().getFullYear() });
+      setCourseFormMessage('Course created and assigned to you.');
+      retryOverview();
+    } catch (requestError) {
+      setCourseFormError(requestError.message || 'The course could not be created.');
+    } finally {
+      setCreatingCourse(false);
+    }
+  }
+
   const performanceByCourse = new Map(
     (overview.performance?.courses || []).map((item) => [item.course.id, item]),
   );
@@ -108,11 +139,44 @@ export default function LecturerDashboard() {
           <Link className="lecturer-secondary-link" to="/library">Open document library</Link>
         </div>
 
+        <form className="lecturer-course-create" onSubmit={createCourse}>
+          <div className="lecturer-course-create-heading">
+            <h3>Create a course</h3>
+            <p>New courses are automatically assigned to your Lecturer account.</p>
+          </div>
+          {courseFormError && <p className="lecturer-course-create-error" role="alert">{courseFormError}</p>}
+          {courseFormMessage && <p className="lecturer-course-create-success" role="status">{courseFormMessage}</p>}
+          <div className="lecturer-course-create-fields">
+            <label>
+              Course code
+              <input required maxLength="50" value={courseForm.course_code} disabled={creatingCourse} onChange={(event) => setCourseForm({ ...courseForm, course_code: event.target.value })} />
+            </label>
+            <label>
+              Course title
+              <input required maxLength="255" value={courseForm.course_title} disabled={creatingCourse} onChange={(event) => setCourseForm({ ...courseForm, course_title: event.target.value })} />
+            </label>
+            <label>
+              Academic year
+              <input required type="number" min="1900" max="2200" value={courseForm.year} disabled={creatingCourse} onChange={(event) => setCourseForm({ ...courseForm, year: event.target.value })} />
+            </label>
+            <label>
+              Semester
+              <select value={courseForm.semester} disabled={creatingCourse} onChange={(event) => setCourseForm({ ...courseForm, semester: event.target.value })}>
+                <option>First</option>
+                <option>Second</option>
+              </select>
+            </label>
+            <button type="submit" disabled={creatingCourse}>
+              {creatingCourse ? 'Creating…' : 'Create course'}
+            </button>
+          </div>
+        </form>
+
         {loading && <p className="lecturer-dashboard-status" role="status">Loading your courses…</p>}
         {!loading && !error && overview.courses.length === 0 && (
           <div className="lecturer-empty">
             <h3>No courses assigned yet</h3>
-            <p>Ask an administrator to assign you to a course. Assigned courses will appear here.</p>
+            <p>Create a course above, or ask an administrator to assign you to an existing course.</p>
           </div>
         )}
         {!loading && !error && overview.courses.length > 0 && (

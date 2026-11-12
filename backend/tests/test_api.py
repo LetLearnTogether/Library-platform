@@ -244,6 +244,46 @@ def test_course_responses_include_public_lecturer_name(api):
     assert created.json()["lecturer_name"] is None
 
 
+def test_lecturers_can_create_courses_assigned_to_themselves(api):
+    lecturer_headers = login(api, "lecturer@example.com")
+    admin_headers = login(api, "admin@example.com")
+    courses = api.get("/api/v1/courses?page=1&page_size=100")
+    lecturer_id = courses.json()["items"][0]["lecturer_id"]
+    lecturer_users = api.get(
+        "/api/v1/users?page=1&page_size=100&role=Lecturer",
+        headers=admin_headers,
+    )
+    other_lecturer_id = next(
+        user["id"] for user in lecturer_users.json()["items"] if user["id"] != lecturer_id
+    )
+
+    created = api.post(
+        "/api/v1/courses",
+        headers=lecturer_headers,
+        json={
+            "course_code": "LECT201",
+            "course_title": "Lecturer-created course",
+            "year": 2026,
+            "semester": "Second",
+            "lecturer_id": other_lecturer_id,
+        },
+    )
+    assert created.status_code == 201, created.text
+    assert created.json()["lecturer_id"] == lecturer_id
+
+    forbidden = api.post(
+        "/api/v1/courses",
+        headers=login(api, "student@example.com"),
+        json={
+            "course_code": "STU201",
+            "course_title": "Student-created course",
+            "year": 2026,
+            "semester": "First",
+        },
+    )
+    assert forbidden.status_code == 403
+
+
 def test_documents_moderator_approval_verification_and_file(api):
     student_headers = login(api, "student@example.com")
     moderator_headers = login(api, "moderator@example.com")

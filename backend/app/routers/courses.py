@@ -25,6 +25,7 @@ from app.services.api import commit_or_conflict, flush_or_conflict, paginate, re
 
 router = APIRouter(prefix="/courses", tags=["Courses"])
 admin_only = require_roles("Admin")
+course_creator = require_roles("Admin", "Lecturer")
 logger = logging.getLogger(__name__)
 
 
@@ -61,14 +62,18 @@ def list_courses(
 
 
 @router.post("", response_model=CourseResponse, status_code=status.HTTP_201_CREATED)
-def create_course(payload: CourseCreate, db: Session = Depends(get_db), admin: User = Depends(admin_only)):
-    validate_lecturer(db, payload.lecturer_id)
-    course = Course(**payload.model_dump())
+def create_course(payload: CourseCreate, db: Session = Depends(get_db), creator: User = Depends(course_creator)):
+    course_data = payload.model_dump()
+    if creator.role == "Lecturer":
+        course_data["lecturer_id"] = creator.id
+    else:
+        validate_lecturer(db, payload.lecturer_id)
+    course = Course(**course_data)
     db.add(course)
     flush_or_conflict(db, "A course with this course code already exists.")
     record_activity(
         db,
-        admin,
+        creator,
         "created",
         "course",
         course.id,
