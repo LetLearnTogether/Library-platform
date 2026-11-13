@@ -53,6 +53,11 @@ class LoginRequest(APIModel):
         return value
 
 
+class GoogleLoginRequest(APIModel):
+    credential: str = Field(min_length=1, max_length=8192)
+    nonce: str = Field(min_length=16, max_length=128)
+
+
 class TokenResponse(APIModel):
     access_token: str
     token_type: Literal["bearer"] = "bearer"

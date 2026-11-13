@@ -73,6 +73,8 @@ cp .env.sample .env.local
 # Open .env.local and set VITE_API_BASE_URL=http://localhost:8000/api/v1
 ```
 
+Google Sign-In uses the same Web Client ID in `backend/.env` as `GOOGLE_CLIENT_ID` and `frontend/.env.local` as `VITE_GOOGLE_CLIENT_ID`. For Docker Compose, set `GOOGLE_CLIENT_ID` in the root `.env`. The Web Client's authorized JavaScript origins must include `http://localhost:5173`, `https://letlearntogetther.com`, and `https://www.letlearntogetther.com`. The ID-token flow does not use a client secret; never commit or expose one.
+
 ### 3. Run with Docker (Recommended)
 Since our production environment is Ubuntu, we use Docker to ensure the app runs exactly the same on your laptop as it does on the server.
 ```bash

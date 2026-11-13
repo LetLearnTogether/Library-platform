@@ -44,11 +44,7 @@ export function AuthProvider({ children }) {
     return () => { active = false; };
   }, [logout]);
 
-  const login = useCallback(async (email, password) => {
-    const token = await apiRequest('/auth/login', {
-      method: 'POST',
-      body: { email, password },
-    });
+  const establishSession = useCallback(async (token) => {
     setAccessToken(token.access_token);
     try {
       const currentUser = await apiRequest('/auth/me');
@@ -60,6 +56,22 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const login = useCallback(async (email, password) => {
+    const token = await apiRequest('/auth/login', {
+      method: 'POST',
+      body: { email, password },
+    });
+    return establishSession(token);
+  }, [establishSession]);
+
+  const loginWithGoogle = useCallback(async (credential, nonce) => {
+    const token = await apiRequest('/auth/google', {
+      method: 'POST',
+      body: { credential, nonce },
+    });
+    return establishSession(token);
+  }, [establishSession]);
+
   const register = useCallback(async ({ name, email, password }) => {
     await apiRequest('/auth/register', {
       method: 'POST',
@@ -70,8 +82,8 @@ export function AuthProvider({ children }) {
   }, [login]);
 
   const value = useMemo(
-    () => ({ user, loading, login, register, logout }),
-    [user, loading, login, register, logout],
+    () => ({ user, loading, login, loginWithGoogle, register, logout }),
+    [user, loading, login, loginWithGoogle, register, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

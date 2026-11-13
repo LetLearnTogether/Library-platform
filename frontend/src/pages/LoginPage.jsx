@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
+import GoogleSignInButton from '../components/auth/GoogleSignInButton';
 import './LoginPage.css';
 
 function LoginPage() {
@@ -9,9 +10,27 @@ function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  function navigateAfterLogin(user) {
+    const isStaff = ['Lecturer', 'Moderator', 'Admin'].includes(user.role);
+    const requestedPath = location.state?.from?.pathname;
+    const requestedPathIsRestricted = requestedPath === '/student-dashboard'
+      ? user.role !== 'Student'
+      : requestedPath === '/staff'
+        ? !isStaff
+        : requestedPath?.startsWith('/quizzes/')
+          ? user.role !== 'Student'
+          : false;
+    navigate(
+      requestedPath && !requestedPathIsRestricted
+        ? requestedPath
+        : '/',
+      { replace: true },
+    );
+  }
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -30,23 +49,22 @@ function LoginPage() {
     setSubmitting(true);
     try {
       const user = await login(email.trim(), password);
-      const isStaff = ['Lecturer', 'Moderator', 'Admin'].includes(user.role);
-      const requestedPath = location.state?.from?.pathname;
-      const requestedPathIsRestricted = requestedPath === '/student-dashboard'
-        ? user.role !== 'Student'
-        : requestedPath === '/staff'
-          ? !isStaff
-          : requestedPath?.startsWith('/quizzes/')
-            ? user.role !== 'Student'
-            : false;
-      navigate(
-        requestedPath && !requestedPathIsRestricted
-          ? requestedPath
-          : '/',
-        { replace: true },
-      );
+      navigateAfterLogin(user);
     } catch (error) {
       setMessage(error.message || 'Unable to sign in. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleGoogleCredential(credential, nonce) {
+    setMessage('');
+    setSubmitting(true);
+    try {
+      const user = await loginWithGoogle(credential, nonce);
+      navigateAfterLogin(user);
+    } catch (error) {
+      setMessage(error.message || 'Unable to sign in with Google. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -62,6 +80,12 @@ function LoginPage() {
             Sign in to continue your learning journey.
           </p>
         </div>
+
+        <GoogleSignInButton
+          onCredential={handleGoogleCredential}
+          disabled={submitting}
+          dividerLabel="or sign in with email"
+        />
 
         <form className="login-form" onSubmit={handleSubmit}>
           <div className="login-field">

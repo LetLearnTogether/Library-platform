@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
+import GoogleSignInButton from '../components/auth/GoogleSignInButton';
 import { usePlatformSettings } from '../settings/PlatformSettingsContext.js';
 import './RegisterPage.css';
 
@@ -15,7 +16,7 @@ export default function RegisterPage() {
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const { register } = useAuth();
+  const { register, loginWithGoogle } = useAuth();
   const { settings } = usePlatformSettings();
   const navigate = useNavigate();
 
@@ -41,6 +42,21 @@ export default function RegisterPage() {
       ...previous,
       [name]: value,
     }));
+  }
+
+  async function handleGoogleCredential(credential, nonce) {
+    setMessage('');
+    setMessageType('');
+    setSubmitting(true);
+    try {
+      const user = await loginWithGoogle(credential, nonce);
+      navigate(user.role === 'Student' ? '/student-dashboard' : '/', { replace: true });
+    } catch (error) {
+      setMessage(error.message || 'Unable to create an account with Google. Please try again.');
+      setMessageType('error');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   async function handleSubmit(event) {
@@ -118,6 +134,12 @@ export default function RegisterPage() {
             {message}
           </div>
         )}
+
+        <GoogleSignInButton
+          onCredential={handleGoogleCredential}
+          disabled={submitting}
+          dividerLabel="or register with email"
+        />
 
         <form onSubmit={handleSubmit}>
           <div className="register-field">
