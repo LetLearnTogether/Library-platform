@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiRequest } from '../lib/api';
 import './AdminStudentVerificationsPage.css';
 
@@ -13,7 +13,7 @@ export default function AdminStudentVerificationsPage() {
   const [error, setError] = useState('');
   const [workingId, setWorkingId] = useState(null);
   const [retry, setRetry] = useState(0);
-  const previewUrlsRef = useRef(new Set());
+  const previewUrlsRef = useRef(new Map());
 
   useEffect(() => () => {
     previewUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
@@ -38,19 +38,34 @@ export default function AdminStudentVerificationsPage() {
     return () => { active = false; };
   }, [statusFilter, page, retry]);
 
-  async function showImage(submission, side) {
+  const showImage = useCallback(async (submission, side) => {
     const key = `${submission.id}-${side}`;
     setError('');
     try {
       const response = await apiRequest(`/student-verifications/${submission.id}/${side}-image`);
       if (!(response instanceof Response)) throw new Error('The student ID image could not be opened.');
       const objectUrl = URL.createObjectURL(await response.blob());
-      previewUrlsRef.current.add(objectUrl);
+      const previousUrl = previewUrlsRef.current.get(key);
+      previewUrlsRef.current.set(key, objectUrl);
+      if (previousUrl) URL.revokeObjectURL(previousUrl);
       setPreviewUrls((current) => ({ ...current, [key]: objectUrl }));
     } catch (requestError) {
       setError(requestError.message || 'The student ID image could not be opened.');
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    submissions
+      .filter((submission) => submission.status === 'Pending')
+      .forEach((submission) => {
+        if (!previewUrlsRef.current.has(`${submission.id}-front`)) {
+          showImage(submission, 'front');
+        }
+        if (submission.back_image_url && !previewUrlsRef.current.has(`${submission.id}-back`)) {
+          showImage(submission, 'back');
+        }
+      });
+  }, [submissions, showImage]);
 
   async function reviewSubmission(submission, action) {
     setWorkingId(submission.id);
@@ -137,7 +152,7 @@ export default function AdminStudentVerificationsPage() {
               ].map(([side, label, imageUrl]) => imageUrl && (
                 <div key={side}>
                   <button type="button" className="secondary-button" onClick={() => showImage(submission, side)}>
-                    {previewUrls[`${submission.id}-${side}`] ? 'Refresh' : 'View'} {label.toLowerCase()}
+                    {previewUrls[`${submission.id}-${side}`] ? 'Reload' : 'View'} {label.toLowerCase()}
                   </button>
                   {previewUrls[`${submission.id}-${side}`] && (
                     <img src={previewUrls[`${submission.id}-${side}`]} alt={label} />

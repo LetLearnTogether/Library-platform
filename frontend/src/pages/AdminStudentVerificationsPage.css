@@ -102,11 +102,12 @@
 }
 
 .student-verification-images img {
-  width: min(100%, 420px);
-  max-height: 320px;
+  width: min(100%, 900px);
+  max-height: min(75vh, 720px);
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   object-fit: contain;
+  background: #f8fafc;
 }
 
 .student-verification-review-actions {

@@ -178,7 +178,7 @@
 
 .verification-upload-box {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 180px;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 360px);
   gap: 18px;
   margin-bottom: 18px;
   padding: 18px;
@@ -206,11 +206,11 @@
   display: grid;
   place-items: center;
   width: 100%;
-  max-height: 170px;
+  max-height: 320px;
   border-radius: 10px;
   border: 1px solid #dbeafe;
   background: #ffffff;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .verification-empty-preview {
