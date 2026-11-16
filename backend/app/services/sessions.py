@@ -75,7 +75,7 @@ def set_session_cookie(response: Response, session_secret: str, expires_at: date
         key=SESSION_COOKIE_NAME,
         value=session_secret,
         max_age=max_age,
-        expires=max_age,
+        expires=as_utc(expires_at),
         path="/",
         secure=SESSION_COOKIE_SECURE,
         httponly=True,

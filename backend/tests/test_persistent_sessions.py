@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from http.cookies import SimpleCookie
 
 from fastapi.testclient import TestClient
 from starlette.responses import Response
@@ -35,6 +36,9 @@ def test_login_issues_persistent_http_only_cookie_and_me_restores_user(api):
     assert "httponly" in session_cookie.lower()
     assert "samesite=lax" in session_cookie.lower()
     assert "max-age=" in session_cookie.lower()
+    parsed_session_cookie = SimpleCookie()
+    parsed_session_cookie.load(session_cookie)
+    assert parsed_session_cookie["lt_session"]["expires"]
     assert "httponly" not in csrf_cookie.lower()
 
     with api.app.state.test_session() as db:
