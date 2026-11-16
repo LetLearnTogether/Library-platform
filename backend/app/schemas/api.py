@@ -58,10 +58,14 @@ class GoogleLoginRequest(APIModel):
     nonce: str = Field(min_length=16, max_length=128)
 
 
-class TokenResponse(APIModel):
-    access_token: str
-    token_type: Literal["bearer"] = "bearer"
-    expires_in: int
+class UserSessionResponse(APIModel):
+    id: str
+    device_name: str
+    created_at: datetime
+    last_used_at: datetime
+    expires_at: datetime
+    max_expires_at: datetime
+    current: bool
 
 
 class UserUpdate(APIModel):
@@ -83,6 +87,12 @@ class UserResponse(APIModel):
     email: EmailStr
     role: UserRole
     created_at: datetime
+
+
+class AuthSessionResponse(APIModel):
+    authenticated: bool
+    user: UserResponse | None
+    csrf_token: str | None
 
 
 class StudentVerificationCreate(APIModel):

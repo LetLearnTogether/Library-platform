@@ -12,6 +12,7 @@ from app.models.entities import (
     Report,
     StudentVerification,
     User,
+    UserSession,
 )
 
 __all__ = [
@@ -28,4 +29,5 @@ __all__ = [
     "Report",
     "StudentVerification",
     "User",
+    "UserSession",
 ]

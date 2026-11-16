@@ -6,6 +6,7 @@ import './AuthenticatedLayout.css';
 
 function AuthenticatedLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [logoutError, setLogoutError] = useState('');
   const [theme, setTheme] = useState(() => (
     window.localStorage.getItem('letlearn-theme') === 'dark' ? 'dark' : 'light'
   ));
@@ -59,10 +60,15 @@ function AuthenticatedLayout({ children }) {
         { to: '/upload', label: 'Upload document', icon: '↑' },
       ];
 
-  function signOut() {
-    logout();
-    setSidebarOpen(false);
-    navigate('/', { replace: true });
+  async function signOut() {
+    setLogoutError('');
+    try {
+      await logout();
+      setSidebarOpen(false);
+      navigate('/', { replace: true });
+    } catch (error) {
+      setLogoutError(error.message || 'Sign out could not be completed. Please try again.');
+    }
   }
 
   function toggleTheme() {
@@ -93,6 +99,7 @@ function AuthenticatedLayout({ children }) {
           <span className="portal-account-copy"><strong>{user.name}</strong><small>{user.role}</small></span>
           <button type="button" className="portal-signout" onClick={signOut}>Sign out</button>
         </div>
+        {logoutError && <p role="alert">{logoutError}</p>}
       </header>
 
       <div className="portal-body">

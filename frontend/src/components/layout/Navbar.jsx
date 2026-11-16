@@ -6,11 +6,23 @@ import './Navbar.css';
 
 function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [logoutError, setLogoutError] = useState('');
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   function closeMenu() {
     setMenuOpen(false);
+  }
+
+  async function handleLogout() {
+    setLogoutError('');
+    try {
+      await logout();
+      closeMenu();
+      navigate('/');
+    } catch (error) {
+      setLogoutError(error.message || 'Sign out could not be completed. Please try again.');
+    }
   }
 
   return (
@@ -85,11 +97,7 @@ function Navbar() {
             <button
               type="button"
               className="navbar-link navbar-auth-button"
-              onClick={() => {
-                logout();
-                closeMenu();
-                navigate('/');
-              }}
+              onClick={handleLogout}
             >
               Sign out
             </button>
@@ -116,6 +124,7 @@ function Navbar() {
             </NavLink>
           </>
         )}
+        {logoutError && <p role="alert">{logoutError}</p>}
       </nav>
     </header>
   );

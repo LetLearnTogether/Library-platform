@@ -25,19 +25,25 @@ def test_registration_login_and_error_envelope(api):
     response = api.post(
         "/api/v1/auth/register",
         json={"name": "New Student", "email": "new@example.com", "password": "long-password"},
+        headers={"Origin": "http://localhost:5173"},
     )
     assert response.status_code == 201
-    assert response.json()["role"] == "Student"
+    assert response.json()["authenticated"] is True
+    assert response.json()["user"]["role"] == "Student"
     assert "password_hash" not in response.json()
+    assert api.get("/api/v1/auth/me").json()["user"]["email"] == "new@example.com"
 
     token_response = api.post(
         "/api/v1/auth/login",
         json={"email": "new@example.com", "password": "long-password"},
+        headers={"Origin": "http://localhost:5173"},
     )
     assert token_response.status_code == 200
-    headers = {"Authorization": f"Bearer {token_response.json()['access_token']}"}
-    assert api.get("/api/v1/auth/me", headers=headers).json()["email"] == "new@example.com"
+    assert token_response.json()["authenticated"] is True
+    assert token_response.json()["user"]["email"] == "new@example.com"
+    assert api.get("/api/v1/auth/me").json()["user"]["email"] == "new@example.com"
 
+    api.cookies.clear()
     unauthenticated = api.get("/api/v1/users")
     assert unauthenticated.status_code == 401
     error = unauthenticated.json()
@@ -110,6 +116,7 @@ def test_platform_settings_enforce_registration_and_student_uploads(api):
     registration = api.post(
         "/api/v1/auth/register",
         json={"name": "New Student", "email": "new@example.com", "password": "long-password"},
+        headers={"Origin": "http://localhost:5173"},
     )
     assert registration.status_code == 403
     assert registration.json()["message"] == "Public registration is currently paused."
@@ -142,6 +149,7 @@ def test_platform_settings_enforce_registration_and_student_uploads(api):
     registration = api.post(
         "/api/v1/auth/register",
         json={"name": "Enabled Student", "email": "enabled@example.com", "password": "long-password"},
+        headers={"Origin": "http://localhost:5173"},
     )
     assert registration.status_code == 201
     student_upload = api.post(

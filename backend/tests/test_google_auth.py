@@ -15,6 +15,7 @@ def google_login(api, credential="test-google-credential", nonce=NONCE):
     return api.post(
         "/api/v1/auth/google",
         json={"credential": credential, "nonce": nonce},
+        headers={"Origin": "http://localhost:5173"},
     )
 
 
@@ -118,24 +119,23 @@ def test_google_login_creates_and_reuses_a_student_account(api, monkeypatch):
 
     first = google_login(api)
     assert first.status_code == 200, first.text
-    first_user = api.get(
-        "/api/v1/auth/me",
-        headers={"Authorization": f"Bearer {first.json()['access_token']}"},
-    ).json()
+    assert first.json()["authenticated"] is True
+    assert "access_token" not in first.json()
+    assert api.cookies.get("lt_session")
+    first_user = first.json()["user"]
     assert first_user["email"] == "new-student@gmail.com"
     assert first_user["name"] == "New Student"
     assert first_user["role"] == "Student"
 
     second = google_login(api)
-    second_user = api.get(
-        "/api/v1/auth/me",
-        headers={"Authorization": f"Bearer {second.json()['access_token']}"},
-    ).json()
+    second_user = second.json()["user"]
     assert second_user["id"] == first_user["id"]
+    assert api.get("/api/v1/auth/me").json()["user"]["id"] == first_user["id"]
 
     password_login = api.post(
         "/api/v1/auth/login",
         json={"email": "new-student@gmail.com", "password": "any-password"},
+        headers={"Origin": "http://localhost:5173"},
     )
     assert password_login.status_code == 401
 
@@ -149,20 +149,15 @@ def test_google_login_links_verified_email_to_existing_password_account(api, mon
 
     response = google_login(api)
     assert response.status_code == 200, response.text
-    google_user = api.get(
-        "/api/v1/auth/me",
-        headers={"Authorization": f"Bearer {response.json()['access_token']}"},
-    ).json()
+    google_user = response.json()["user"]
 
     password_user = api.post(
         "/api/v1/auth/login",
         json={"email": "student@example.com", "password": "password-123"},
+        headers={"Origin": "http://localhost:5173"},
     )
     assert password_user.status_code == 200
-    existing_user = api.get(
-        "/api/v1/auth/me",
-        headers={"Authorization": f"Bearer {password_user.json()['access_token']}"},
-    ).json()
+    existing_user = password_user.json()["user"]
     assert existing_user["id"] == google_user["id"]
 
 

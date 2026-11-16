@@ -34,6 +34,7 @@ Edit `.env` on the VPS. Set:
 - A unique MySQL application password and a different MySQL root password.
 - A randomly generated `SECRET_KEY` with at least 32 characters. For example, generate URL-safe values using Python's `secrets.token_urlsafe(48)`.
 - `PUBLIC_API_BASE_URL=https://YOUR_HOSTNAME/api/v1` and `PUBLIC_FRONTEND_URL=https://YOUR_HOSTNAME`.
+- `SESSION_IDLE_TIMEOUT_DAYS` (default 30) and `SESSION_MAX_LIFETIME_DAYS` (default 90); the absolute lifetime must not be shorter than the idle timeout.
 
 Do not use the example placeholder values. Restrict access to `.env`; keep it out of Git and backups that are not protected. The example uses URL-safe random password guidance because deployment backup commands load `.env` as a shell environment file.
 

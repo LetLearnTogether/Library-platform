@@ -41,6 +41,13 @@ MAX_UPLOAD_SIZE_BYTES = int(os.getenv("MAX_UPLOAD_SIZE_BYTES", str(1024 * 1024))
 PUBLIC_API_BASE_URL = os.getenv("PUBLIC_API_BASE_URL", "http://localhost:8000/api/v1").rstrip("/")
 PUBLIC_FRONTEND_URL = os.getenv("PUBLIC_FRONTEND_URL", "http://localhost:5173").rstrip("/")
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "").strip()
+SESSION_IDLE_TIMEOUT_DAYS = int(os.getenv("SESSION_IDLE_TIMEOUT_DAYS", "30"))
+SESSION_MAX_LIFETIME_DAYS = int(os.getenv("SESSION_MAX_LIFETIME_DAYS", "90"))
+SESSION_COOKIE_SECURE = APP_ENV == "production"
+SESSION_COOKIE_NAME = "__Host-lt_session" if SESSION_COOKIE_SECURE else "lt_session"
+CSRF_COOKIE_NAME = "__Host-lt_csrf" if SESSION_COOKIE_SECURE else "lt_csrf"
+if SESSION_IDLE_TIMEOUT_DAYS <= 0 or SESSION_MAX_LIFETIME_DAYS < SESSION_IDLE_TIMEOUT_DAYS:
+    raise RuntimeError("Persistent-session maximum lifetime must be at least its positive idle timeout.")
 CORS_ORIGINS = [
     origin.strip()
     for origin in os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",")

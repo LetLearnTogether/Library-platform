@@ -13,7 +13,8 @@ The requirements source is the [PRD](../LetLearnTogether_PRD_v3.md) and [SRS](..
 - Use plural resource names and stable integer resource identifiers.
 - List responses contain `page`, `page_size`, `total_items`, `total_pages`, and `items`. Pages are 1-based; the default page size is 20 and the maximum is 100.
 - Errors use `{ "error_code": "...", "message": "...", "request_id": "..." }`.
-- Protected operations use `Authorization: Bearer <JWT>`. Public operations explicitly disable bearer authentication in the OpenAPI contract.
+- Protected operations use an HTTP-only persistent session cookie for browser clients. The cookie session expires after 30 days of inactivity and at most 90 days after login. Unsafe cookie-authenticated requests require the readable CSRF cookie in `X-CSRF-Token` and an allowed `Origin`. Previously issued bearer JWTs remain accepted until their normal expiration.
+- `POST /auth/login`, `/auth/register`, and `/auth/google` set `__Host-lt_session` (production) as an HTTP-only, Secure, SameSite=Lax cookie and return a CSRF token. `GET /auth/me` restores the session; `POST /auth/logout` revokes the current device; `/auth/sessions` lists and revokes devices owned by the signed-in user. Unsafe cookie-authenticated requests are origin-checked and require the matching CSRF cookie/header.
 - Passwords are bcrypt-hashed. Because bcrypt accepts at most 72 UTF-8 bytes, inputs beyond that limit are rejected.
 - Course document uploads are restricted to PDF, JPEG, PNG, and WebP, with both extension and content validation. The current default maximum size is 1 MiB; student ID images may be up to 5 MiB each.
 - Quiz read responses never expose correct-answer indexes. The server calculates submitted scores from stored answer keys.
@@ -22,7 +23,7 @@ The requirements source is the [PRD](../LetLearnTogether_PRD_v3.md) and [SRS](..
 
 | Group | Contract routes | Access summary |
 | --- | --- | --- |
-| Authentication | `/auth/register`, `/auth/login`, `/auth/me` | Registration/login public; profile authenticated. |
+| Authentication | `/auth/register`, `/auth/login`, `/auth/google`, `/auth/me`, `/auth/logout`, `/auth/sessions`, `/auth/sessions/{session_id}` | Password and Google login/register issue persistent sessions; users may list and revoke their own sessions. |
 | Users | `/users`, `/users/{user_id}` | Admin only. |
 | Courses | `/courses`, `/courses/{course_id}` | Reads public; create/update/delete Admin only. |
 | Documents | `/documents`, `/documents/mine`, `/documents/{document_id}`, `/documents/{document_id}/content`, review, revoke | Verified library reads public; upload authenticated; review by assigned Lecturer, Moderator, or Admin; revocation/removal by Moderator or Admin. |

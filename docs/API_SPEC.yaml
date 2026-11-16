@@ -29,6 +29,7 @@ tags:
 
 security:
   - bearerAuth: []
+  - sessionCookie: []
 
 paths:
   /settings/public:
@@ -119,7 +120,7 @@ paths:
     post:
       tags: [Authentication]
       summary: Register a student account
-      description: Public registration always creates a Student account. Elevated roles are assigned by an administrator.
+      description: Public registration always creates a Student account, then starts a persistent HTTP-only cookie session. Elevated roles are assigned by an administrator.
       security: []
       requestBody:
         required: true
@@ -133,7 +134,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
+                $ref: '#/components/schemas/AuthSession'
         '400':
           $ref: '#/components/responses/BadRequest'
         '409':
@@ -148,7 +149,7 @@ paths:
   /auth/login:
     post:
       tags: [Authentication]
-      summary: Authenticate and issue an access token
+      summary: Authenticate and create a persistent session
       security: []
       requestBody:
         required: true
@@ -162,7 +163,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TokenResponse'
+                $ref: '#/components/schemas/AuthSession'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '422':
@@ -173,16 +174,91 @@ paths:
   /auth/me:
     get:
       tags: [Authentication]
-      summary: Get the authenticated user's profile
+      summary: Restore the current cookie session
+      security: []
       responses:
         '200':
-          description: Current user
+          description: Current session, or authenticated false when no valid session exists
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
+                $ref: '#/components/schemas/AuthSession'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /auth/google:
+    post:
+      tags: [Authentication]
+      summary: Authenticate with Google and create a persistent session
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoogleLoginRequest'
+      responses:
+        '200':
+          description: Google identity accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSession'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Revoke the current persistent session
+      responses:
+        '204':
+          description: Session revoked and cookies cleared
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /auth/sessions:
+    get:
+      tags: [Authentication]
+      summary: List active sessions for the authenticated user
+      responses:
+        '200':
+          description: Active sessions on the account
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserSession'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        default:
+          $ref: '#/components/responses/Error'
+
+  /auth/sessions/{session_id}:
+    delete:
+      tags: [Authentication]
+      summary: Revoke one session belonging to the authenticated user
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Session revoked
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
         default:
           $ref: '#/components/responses/Error'
 
@@ -1604,6 +1680,10 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-lt_session
 
   parameters:
     Page:
@@ -1895,19 +1975,55 @@ components:
           type: string
           format: password
 
-    TokenResponse:
+    GoogleLoginRequest:
       type: object
-      required: [access_token, token_type, expires_in]
+      required: [credential, nonce]
       properties:
-        access_token:
+        credential:
           type: string
-        token_type:
+        nonce:
           type: string
-          enum: [bearer]
-        expires_in:
-          type: integer
-          description: Token lifetime in seconds.
-          example: 1800
+          minLength: 16
+          maxLength: 128
+
+    AuthSession:
+      type: object
+      required: [authenticated, user, csrf_token]
+      properties:
+        authenticated:
+          type: boolean
+        user:
+          allOf:
+            - $ref: '#/components/schemas/User'
+          nullable: true
+        csrf_token:
+          type: string
+          nullable: true
+          description: CSRF token for unsafe requests made with the session cookie.
+
+    UserSession:
+      type: object
+      required: [id, device_name, created_at, last_used_at, expires_at, max_expires_at, current]
+      properties:
+        id:
+          type: string
+          format: uuid
+        device_name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        last_used_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        max_expires_at:
+          type: string
+          format: date-time
+        current:
+          type: boolean
 
     User:
       type: object

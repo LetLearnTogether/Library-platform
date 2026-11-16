@@ -5,7 +5,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base, get_db
-from app.core.security import hash_password
+from app.core.security import create_access_token, hash_password
 from app.main import app
 from app.models import Course, PlatformSettings, User
 
@@ -33,6 +33,7 @@ def api(tmp_path, monkeypatch):
             db.close()
 
     app.dependency_overrides[get_db] = override_get_db
+    app.state.test_session = test_session
     monkeypatch.setattr(main_module, "engine", test_engine)
     upload_dir = tmp_path / "uploads"
     monkeypatch.setattr(main_module, "UPLOAD_DIR", upload_dir)
@@ -62,6 +63,13 @@ def api(tmp_path, monkeypatch):
 
 
 def login(api, email):
-    response = api.post("/api/v1/auth/login", json={"email": email, "password": "password-123"})
+    response = api.post(
+        "/api/v1/auth/login",
+        json={"email": email, "password": "password-123"},
+        headers={"Origin": "http://localhost:5173"},
+    )
     assert response.status_code == 200
-    return {"Authorization": f"Bearer {response.json()['access_token']}"}
+    user_id = response.json()["user"]["id"]
+    token, _ = create_access_token(user_id)
+    api.cookies.clear()
+    return {"Authorization": f"Bearer {token}"}
